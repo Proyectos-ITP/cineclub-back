@@ -1,0 +1,60 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+.idea/
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### Docker ###
+docker-compose.override.yml
+.docker/
+**/.dockerignore
+
+### Logs y temporales ###
+logs/
+*.log
+tmp/
+*.tmp
+*.bak
+*.swp
+*.swo
+
+### Entornos (.env) ###
+.env
+.env.*
+!.env.example
+
+### SO ###
+.DS_Store
+Thumbs.db
+
+### Otros ###
+.spring-boot-devtools.properties

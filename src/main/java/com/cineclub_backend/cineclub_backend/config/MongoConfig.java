@@ -1,0 +1,12 @@
+package com.cineclub_backend.cineclub_backend.config;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
+
+@Configuration
+@EnableMongoRepositories(basePackages = {
+    "com.cineclub_backend.cineclub_backend.movies.repositories",
+    "com.cineclub_backend.cineclub_backend.users.repositories"
+})
+public class MongoConfig {
+}

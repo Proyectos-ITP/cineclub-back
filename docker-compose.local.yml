@@ -3,7 +3,7 @@ version: '3.8'
 services:
   mongo:
     image: mongo:7
-    container_name: mongo_dev
+    container_name: mongo_local
     restart: unless-stopped
     command: --bind_ip_all
     environment:
@@ -13,25 +13,25 @@ services:
     ports:
       - '27018:27017'
     volumes:
-      - mongo_dev_data:/data/db
+      - mongo_local_data:/data/db
 
   redis:
     image: redis:7
-    container_name: redis_dev
+    container_name: redis_local
     command: ['redis-server', '--requirepass', '${REDIS_PASSWORD}']
     ports:
       - '6379:6379'
     volumes:
-      - redis_dev_data:/data
+      - redis_local_data:/data
 
   app:
     build:
       context: .
-      dockerfile: Dockerfile.development
-    container_name: cineclub_backend_dev
+      dockerfile: Dockerfile.local
+    container_name: cineclub_backend_local
     depends_on:
-      - mongo
-      - redis
+      - mongo_local
+      - redis_local
     env_file:
       - .env
     environment:
@@ -43,5 +43,5 @@ services:
     command: ['./mvnw', 'spring-boot:run']
 
 volumes:
-  mongo_dev_data:
-  redis_dev_data:
+  mongo_local_data:
+  redis_local_data:

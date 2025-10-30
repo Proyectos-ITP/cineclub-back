@@ -1,14 +1,46 @@
-# Stage 1: build
+# Stage 1: Build
 FROM maven:3.9.6-eclipse-temurin-21 AS builder
 WORKDIR /app
-COPY pom.xml .
-RUN mvn dependency:go-offline -B
-COPY src ./src
-RUN mvn clean package -DskipTests
 
-# Stage 2: image
-FROM eclipse-temurin:21-jdk
+# Copiar solo archivos de configuración de Maven para aprovechar cache de Docker
+COPY pom.xml .
+COPY .mvn .mvn
+
+# Descargar dependencias (se cachea si pom.xml no cambia)
+RUN mvn dependency:go-offline -B
+
+# Copiar código fuente y compilar
+COPY src ./src
+RUN mvn clean package -DskipTests -B
+
+# Stage 2: Runtime
+FROM eclipse-temurin:21-jre-alpine
+
+# Crear usuario no-root para seguridad
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
+
 WORKDIR /app
-COPY --from=builder /app/target/*.jar app.jar
+
+# Copiar JAR desde stage de build
+COPY --from=builder --chown=appuser:appgroup /app/target/*.jar app.jar
+
+# Cambiar a usuario no-root
+USER appuser
+
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1
+
+# Configuración optimizada de JVM para contenedores
+ENTRYPOINT ["java", \
+    "-XX:+UseContainerSupport", \
+    "-XX:MaxRAMPercentage=75.0", \
+    "-XX:InitialRAMPercentage=50.0", \
+    "-XX:+UseG1GC", \
+    "-XX:+OptimizeStringConcat", \
+    "-XX:+UseStringDeduplication", \
+    "-Djava.security.egd=file:/dev/./urandom", \
+    "-jar", "app.jar"]

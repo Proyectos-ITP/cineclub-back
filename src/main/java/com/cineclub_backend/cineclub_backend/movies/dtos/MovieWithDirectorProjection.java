@@ -1,12 +1,11 @@
 package com.cineclub_backend.cineclub_backend.movies.dtos;
 
 import java.util.Date;
-import java.util.Optional;
 
 import lombok.Data;
 
 @Data
-public class MovieDto {
+public class MovieWithDirectorProjection {
     private String id;
     private int externalId;
     private String title;
@@ -16,5 +15,5 @@ public class MovieDto {
     private String posterPath;
     private int runtime;
     private String originalLanguage;
-    private Optional<String> director;
+    private String director;
 }

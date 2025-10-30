@@ -2,8 +2,8 @@ package com.cineclub_backend.cineclub_backend.movies.services;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -139,10 +139,11 @@ public class CrudMovieService {
         }
 
         dto.setOriginalLanguage(doc.getString("originalLanguage"));
-        dto.setDirector(Optional.ofNullable(doc.getString("director")));
+        dto.setDirector(doc.getString("director"));
         return dto;
     }
 
+    @Cacheable(value = "movies:details", key = "#id")
     public MovieDto getMovieById(String id) {
         Movie movie = movieRepository.findById(id)
                     .orElseThrow(() -> new ResourceNotFoundException(
@@ -221,7 +222,7 @@ public class CrudMovieService {
         dto.setOriginalLanguage(movie.getOriginalLanguage());
 
         var directorDto = crudDirectorService.getDirectorByMovieId(movie.getId());
-        dto.setDirector(Optional.ofNullable(directorDto != null ? directorDto.getDirector() : null));
+        dto.setDirector(directorDto != null ? directorDto.getDirector() : null);
 
         return dto;
     }

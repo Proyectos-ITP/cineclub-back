@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.bson.Document;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -208,10 +209,12 @@ public class CrudDirectorService {
         return dto;
     }
 
+    @Cacheable(value = "directors:details", key = "#movieId")
     public DirectorDto getDirectorByMovieId(String movieId) {
         return directorsRepository.findByMovieId(movieId).map(this::toDto).orElse(null);
     }
 
+    @Cacheable(value = "directors:details", key = "#id")
     public DirectorDto getDirectorById(String id) {
         return directorsRepository.findById(id).map(this::toDto).orElse(null);
     }

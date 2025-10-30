@@ -1,7 +1,8 @@
 package com.cineclub_backend.cineclub_backend.movies.dtos;
 
 import java.util.Date;
-import java.util.Optional;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 import lombok.Data;
 
@@ -16,5 +17,7 @@ public class MovieDto {
     private String posterPath;
     private int runtime;
     private String originalLanguage;
-    private Optional<String> director;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String director;
 }

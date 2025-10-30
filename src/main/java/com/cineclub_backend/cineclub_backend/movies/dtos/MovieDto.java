@@ -1,6 +1,7 @@
 package com.cineclub_backend.cineclub_backend.movies.dtos;
 
 import java.util.Date;
+import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 

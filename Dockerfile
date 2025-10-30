@@ -30,8 +30,8 @@ USER appuser
 
 EXPOSE 8080
 
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+# Healthcheck - start-period mayor por lazy initialization
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1
 
 # Configuración optimizada de JVM para contenedores

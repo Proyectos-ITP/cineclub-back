@@ -1,31 +1,146 @@
 package com.cineclub_backend.cineclub_backend.movies.services;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.bson.Document;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
+import org.springframework.data.mongodb.core.aggregation.AggregationResults;
+import org.springframework.data.mongodb.core.aggregation.FacetOperation;
+import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
 
+import lombok.extern.slf4j.Slf4j;
+
+import com.cineclub_backend.cineclub_backend.movies.dtos.CreateDirectorDto;
 import com.cineclub_backend.cineclub_backend.movies.dtos.CreateMovieDto;
 import com.cineclub_backend.cineclub_backend.movies.dtos.MovieDto;
 import com.cineclub_backend.cineclub_backend.movies.dtos.UpdateMovieDto;
 import com.cineclub_backend.cineclub_backend.movies.models.Movie;
 import com.cineclub_backend.cineclub_backend.movies.repositories.MovieRepository;
-
 import com.cineclub_backend.cineclub_backend.shared.exceptions.ResourceNotFoundException;
 
 @Service
+@Slf4j
 public class CrudMovieService {
 
     private final MovieRepository movieRepository;
+    private final CrudDirectorService crudDirectorService;
+    private final MongoTemplate mongoTemplate;
 
-    public CrudMovieService(MovieRepository movieRepository) {
+    public CrudMovieService(MovieRepository movieRepository, CrudDirectorService crudDirectorService, MongoTemplate mongoTemplate) {
         this.movieRepository = movieRepository;
+        this.crudDirectorService = crudDirectorService;
+        this.mongoTemplate = mongoTemplate;
     }
 
     public Page<MovieDto> getAllMovies(String title, Pageable pageable) {
-        if (title != null && !title.isEmpty()) {
-            return movieRepository.findByTitleContainingIgnoreCase(title, pageable).map(this::toDto);
+        try {
+            List<AggregationOperation> operations = new ArrayList<>();
+
+            if (title != null && !title.isEmpty()) {
+                operations.add(Aggregation.match(Criteria.where("title").regex(title, "i")));
+            }
+
+            FacetOperation facetOperation = Aggregation.facet()
+                .and(Aggregation.count().as("total")).as("metadata")
+                .and(
+                    Aggregation.sort(pageable.getSort()),
+                    Aggregation.skip((long) pageable.getPageNumber() * pageable.getPageSize()),
+                    Aggregation.limit(pageable.getPageSize()),
+                    Aggregation.stage(
+                        "{ $lookup: { " +
+                        "  from: 'directors', " +
+                        "  let: { movie_id_str: { $toString: '$_id' } }, " +
+                        "  pipeline: [ " +
+                        "    { $match: { $expr: { $eq: ['$movie_id', '$$movie_id_str'] } } } " +
+                        "  ], " +
+                        "  as: 'director' " +
+                        "} }"
+                    ),
+                    Aggregation.unwind("director", true),
+                    Aggregation.project()
+                        .and("_id").as("id")
+                        .and("external_id").as("externalId")
+                        .and("title").as("title")
+                        .and("overview").as("overview")
+                        .and("genres").as("genres")
+                        .and("release_date").as("releaseDate")
+                        .and("poster_path").as("posterPath")
+                        .and("runtime").as("runtime")
+                        .and("original_language").as("originalLanguage")
+                        .and("director.director").as("director")
+                ).as("data");
+
+            operations.add(facetOperation);
+
+            Aggregation aggregation = Aggregation.newAggregation(operations);
+
+            AggregationResults<Document> aggregationResults = mongoTemplate.aggregate(
+                aggregation, "movies", Document.class
+            );
+
+            Document result = aggregationResults.getUniqueMappedResult();
+
+            if (result == null) {
+                return new PageImpl<>(new ArrayList<>(), pageable, 0);
+            }
+
+            @SuppressWarnings("unchecked")
+            List<Document> metadata = (List<Document>) result.get("metadata");
+            long total = metadata.isEmpty() ? 0 : metadata.get(0).getInteger("total", 0);
+
+            @SuppressWarnings("unchecked")
+            List<Document> data = (List<Document>) result.get("data");
+            List<MovieDto> movieDtos = data.stream()
+                .map(this::convertDocumentToMovieDto)
+                .toList();
+
+            return new PageImpl<>(movieDtos, pageable, total);
+
+        } catch (Exception e) {
+            throw e;
         }
-        return movieRepository.findAll(pageable).map(this::toDto);
+    }
+
+    private MovieDto convertDocumentToMovieDto(Document doc) {
+        MovieDto dto = new MovieDto();
+
+        Object idObj = doc.get("id");
+        if (idObj != null) {
+            dto.setId(idObj.toString());
+        }
+
+        Object externalIdObj = doc.get("externalId");
+        if (externalIdObj instanceof Number) {
+            dto.setExternalId(((Number) externalIdObj).intValue());
+        }
+
+        dto.setTitle(doc.getString("title"));
+        dto.setOverview(doc.getString("overview"));
+        dto.setGenres(doc.getString("genres"));
+
+        Object releaseDateObj = doc.get("releaseDate");
+        if (releaseDateObj instanceof java.util.Date) {
+            dto.setReleaseDate((java.util.Date) releaseDateObj);
+        }
+
+        dto.setPosterPath(doc.getString("posterPath"));
+
+        Object runtimeObj = doc.get("runtime");
+        if (runtimeObj instanceof Number) {
+            dto.setRuntime(((Number) runtimeObj).intValue());
+        }
+
+        dto.setOriginalLanguage(doc.getString("originalLanguage"));
+        dto.setDirector(Optional.ofNullable(doc.getString("director")));
+        return dto;
     }
 
     public MovieDto getMovieById(String id) {
@@ -41,6 +156,12 @@ public class CrudMovieService {
             movie.setGenres("Uncategorized");
         }
         movie = movieRepository.save(movie);
+
+        CreateDirectorDto directorDto = new CreateDirectorDto();
+        directorDto.setDirector(movieDto.getDirector());
+        directorDto.setMovieId(movie.getId());
+
+        crudDirectorService.createDirector(directorDto);
         return toDto(movie);
     }
 
@@ -98,6 +219,10 @@ public class CrudMovieService {
         dto.setPosterPath(movie.getPosterPath());
         dto.setRuntime(movie.getRuntime());
         dto.setOriginalLanguage(movie.getOriginalLanguage());
+
+        var directorDto = crudDirectorService.getDirectorByMovieId(movie.getId());
+        dto.setDirector(Optional.ofNullable(directorDto != null ? directorDto.getDirector() : null));
+
         return dto;
     }
 

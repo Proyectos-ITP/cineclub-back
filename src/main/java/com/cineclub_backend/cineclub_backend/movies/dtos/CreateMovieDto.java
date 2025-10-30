@@ -11,7 +11,7 @@ import lombok.Data;
 public class CreateMovieDto {
     private int externalId;
 
-    @NotBlank(message = "Error")
+    @NotBlank(message = "El titulo no puede estar vacio")
     @Size(max = 255)
     @Schema(example = "Jon Doe")
     private String title;
@@ -34,4 +34,9 @@ public class CreateMovieDto {
 
     @Schema(defaultValue = "en")
     private String originalLanguage;
+
+    @NotBlank(message = "El director no puede estar vacio")
+    @Size(max = 255)
+    @Schema(example = "Jon Doe")
+    private String director;
 }

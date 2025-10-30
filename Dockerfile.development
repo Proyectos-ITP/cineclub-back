@@ -10,6 +10,8 @@ COPY src src
 RUN chmod +x mvnw
 RUN ./mvnw dependency:go-offline
 
+RUN ./mvnw clean compile -DskipTests
+
 EXPOSE 8080
 
 CMD ["./mvnw", "spring-boot:run", "-Dspring-boot.run.fork=false"]

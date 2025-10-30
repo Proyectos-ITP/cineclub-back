@@ -12,11 +12,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.cineclub_backend.cineclub_backend.movies.dtos.CreateMovieDto;
+import com.cineclub_backend.cineclub_backend.movies.dtos.FindMovieDto;
 import com.cineclub_backend.cineclub_backend.movies.dtos.MovieDto;
 import com.cineclub_backend.cineclub_backend.movies.dtos.UpdateMovieDto;
 import com.cineclub_backend.cineclub_backend.movies.services.CrudMovieService;
 import com.cineclub_backend.cineclub_backend.shared.dtos.PagedResponseDto;
-import com.cineclub_backend.cineclub_backend.shared.dtos.PaginationDto;
 
 import jakarta.validation.Valid;
 
@@ -30,9 +30,9 @@ public class MovieController {
         this.crudMovieService = crudMovieService;
     }
 
-    @GetMapping
-    public PagedResponseDto<MovieDto> getAllMovies(@ParameterObject PaginationDto paginationDto) {
-        Page<MovieDto> page = crudMovieService.getAllMovies(paginationDto.getTitle(), paginationDto.toPageable());
+    @GetMapping 
+    public PagedResponseDto<MovieDto> getAllMovies(@ParameterObject FindMovieDto findMovieDto) {
+        Page<MovieDto> page = crudMovieService.getAllMovies(findMovieDto.getTitle(), findMovieDto.toPageable());
         return new PagedResponseDto<>(page);
     }
 

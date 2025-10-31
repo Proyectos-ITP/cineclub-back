@@ -2,6 +2,7 @@ package com.cineclub_backend.cineclub_backend.movies.services;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import org.bson.Document;
 import org.springframework.cache.annotation.Cacheable;
@@ -20,18 +21,20 @@ import com.cineclub_backend.cineclub_backend.movies.dtos.DirectorDto;
 import com.cineclub_backend.cineclub_backend.movies.dtos.UpdateDirectorDto;
 import com.cineclub_backend.cineclub_backend.movies.models.Director;
 import com.cineclub_backend.cineclub_backend.movies.repositories.DirectorsRepository;
-import com.cineclub_backend.cineclub_backend.shared.exceptions.ResourceNotFoundException;
 
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
 @Service
 public class CrudDirectorService {
     private final DirectorsRepository directorsRepository;
     private final MongoTemplate mongoTemplate;
+    private final ApplicationContext applicationContext;
 
-    public CrudDirectorService(DirectorsRepository directorsRepository, MongoTemplate mongoTemplate) {
+    public CrudDirectorService(DirectorsRepository directorsRepository, MongoTemplate mongoTemplate, ApplicationContext applicationContext) {
         this.directorsRepository = directorsRepository;
         this.mongoTemplate = mongoTemplate;
+        this.applicationContext = applicationContext;
     }
 
     public Page<DirectorDto> getPagedDirectorsWithMovies(String director, Pageable pageable) {
@@ -214,9 +217,47 @@ public class CrudDirectorService {
         return directorsRepository.findByMovieId(movieId).map(this::toDto).orElse(null);
     }
 
-    @Cacheable(value = "directors:details", key = "#id")
     public DirectorDto getDirectorById(String id) {
-        return directorsRepository.findById(id).map(this::toDto).orElse(null);
+        Director director = directorsRepository.findById(id)
+            .orElseThrow(() -> new NoSuchElementException("El director no existe."));
+
+        CrudDirectorService self = applicationContext.getBean(CrudDirectorService.class);
+
+        return self.getDirectorDetailsByName(director.getDirector());
+    }
+
+    @Cacheable(value = "directors:details", key = "#directorName")
+    public DirectorDto getDirectorDetailsByName(String directorName) {
+        List<AggregationOperation> operations = new ArrayList<>();
+        operations.add(Aggregation.match(Criteria.where("director").is(directorName)));
+        operations.add(Aggregation.group("director")
+            .first("director").as("directorName")
+            .addToSet("movie_id").as("movieIds"));
+
+        operations.add(Aggregation.stage(
+            "{ $lookup: { " +
+            "  from: 'movies', " +
+            "  let: { movie_ids: '$movieIds' }, " +
+            "  pipeline: [ " +
+            "    { $addFields: { id_as_string: { $toString: '$_id' } } }, " +
+            "    { $match: { $expr: { $in: ['$id_as_string', '$$movie_ids'] } } }, " +
+            "    { $project: { id: { $toString: '$_id' }, title: 1, _id: 0 } } " +
+            "  ], " +
+            "  as: 'movies' " +
+            "} }"
+        ));
+
+        operations.add(Aggregation.project()
+            .and("directorName").as("directorName")
+            .and("movies").as("movies"));
+
+        Aggregation aggregation = Aggregation.newAggregation(operations);
+        AggregationResults<Document> results = mongoTemplate.aggregate(aggregation, "directors", Document.class);
+        Document result = results.getUniqueMappedResult();
+
+        if (result == null) throw new NoSuchElementException("El director no existe.");
+
+        return convertDocumentToDirectorDto(result, true);
     }
 
     public DirectorDto createDirector(CreateDirectorDto directorDto) {
@@ -231,14 +272,14 @@ public class CrudDirectorService {
             director.setMovieId(directorDto.getMovieId());
             Director updatedDirector = directorsRepository.save(director);
             return toDto(updatedDirector);
-        }).orElseThrow(() -> new ResourceNotFoundException (
-                "Director no encontrado con el id: " + id));
+        }).orElseThrow(() -> new NoSuchElementException (
+                "El director no existe."));
     }
 
     public void deleteDirector(String id) {
         if (!directorsRepository.existsById(id)) {
-            throw new ResourceNotFoundException(
-                    "Director no encontrado con el id: " + id);
+            throw new NoSuchElementException(
+                    "El director no existe.");
         }
         directorsRepository.deleteById(id);
     }
@@ -250,7 +291,6 @@ public class CrudDirectorService {
         DirectorDto dto = new DirectorDto();
         dto.setId(director.getId());
         dto.setDirector(director.getDirector());
-        // No setear movies aquí, solo en getPagedDirectors se incluirá
         return dto;
     }
 

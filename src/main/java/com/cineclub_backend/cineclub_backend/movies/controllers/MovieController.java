@@ -2,6 +2,8 @@ package com.cineclub_backend.cineclub_backend.movies.controllers;
 
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,6 +18,7 @@ import com.cineclub_backend.cineclub_backend.movies.dtos.FindMovieDto;
 import com.cineclub_backend.cineclub_backend.movies.dtos.MovieDto;
 import com.cineclub_backend.cineclub_backend.movies.dtos.UpdateMovieDto;
 import com.cineclub_backend.cineclub_backend.movies.services.CrudMovieService;
+import com.cineclub_backend.cineclub_backend.shared.dtos.ApiResponse;
 import com.cineclub_backend.cineclub_backend.shared.dtos.PagedResponseDto;
 
 import jakarta.validation.Valid;
@@ -37,22 +40,26 @@ public class MovieController {
     }
 
     @GetMapping("/{id}")
-    public MovieDto getMovieById(@PathVariable String id) {
-        return crudMovieService.getMovieById(id);
+    public ResponseEntity<ApiResponse<MovieDto>> getMovieById(@PathVariable String id) {
+        MovieDto movie = crudMovieService.getMovieById(id);
+        return ResponseEntity.ok(ApiResponse.success(movie));
     }
 
     @PostMapping
-    public MovieDto createMovie(@Valid @RequestBody CreateMovieDto movie) {
-        return crudMovieService.createMovie(movie);
+    public ResponseEntity<ApiResponse<MovieDto>> createMovie(@Valid @RequestBody CreateMovieDto movie) {
+        MovieDto createdMovie = crudMovieService.createMovie(movie);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created("Pelicula creada exitosamente", createdMovie));
     }
 
     @PatchMapping("/{id}")
-    public MovieDto updateMovie(@PathVariable String id, @Valid @RequestBody UpdateMovieDto movie) {
-        return crudMovieService.updateMovie(id, movie);
+    public ResponseEntity<ApiResponse<MovieDto>> updateMovie(@PathVariable String id, @Valid @RequestBody UpdateMovieDto movie) {
+        MovieDto updatedMovie = crudMovieService.updateMovie(id, movie);
+        return ResponseEntity.ok(ApiResponse.success("Pelicula actualizada exitosamente", updatedMovie));
     }
 
     @DeleteMapping("/{id}")
-    public void deleteMovie(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<Void>> deleteMovie(@PathVariable String id) {
         crudMovieService.deleteMovie(id);
+        return ResponseEntity.ok(ApiResponse.success("Pelicula eliminada exitosamente", null));
     }
 }

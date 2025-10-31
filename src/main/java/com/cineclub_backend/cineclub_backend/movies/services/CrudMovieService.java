@@ -2,6 +2,7 @@ package com.cineclub_backend.cineclub_backend.movies.services;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -24,7 +25,6 @@ import com.cineclub_backend.cineclub_backend.movies.dtos.MovieDto;
 import com.cineclub_backend.cineclub_backend.movies.dtos.UpdateMovieDto;
 import com.cineclub_backend.cineclub_backend.movies.models.Movie;
 import com.cineclub_backend.cineclub_backend.movies.repositories.MovieRepository;
-import com.cineclub_backend.cineclub_backend.shared.exceptions.ResourceNotFoundException;
 
 @Service
 @Slf4j
@@ -146,8 +146,8 @@ public class CrudMovieService {
     @Cacheable(value = "movies:details", key = "#id")
     public MovieDto getMovieById(String id) {
         Movie movie = movieRepository.findById(id)
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Película no encontrada con el id: " + id));
+                    .orElseThrow(() -> new NoSuchElementException(
+                            "La película no existe"));
         return toDto(movie);
     }
 
@@ -194,14 +194,14 @@ public class CrudMovieService {
             }
             Movie updatedMovie = movieRepository.save(movie);
             return toDto(updatedMovie);
-        }).orElseThrow(() -> new ResourceNotFoundException(
-                "Película no encontrada con el id: " + id));
+        }).orElseThrow(() -> new NoSuchElementException(
+                "La película no existe"));
     }
 
     public void deleteMovie(String id) {
         if (!movieRepository.existsById(id)) {
-            throw new ResourceNotFoundException(
-                    "Película no encontrada con el id: " + id);
+            throw new NoSuchElementException(
+                    "La película no existe");
         }
         movieRepository.deleteById(id);
     }

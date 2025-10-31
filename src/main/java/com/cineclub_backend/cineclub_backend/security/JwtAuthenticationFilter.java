@@ -62,11 +62,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
-        } catch (Exception e) {
-            logger.error("Error processing JWT token: " + e.getMessage());
+            
+            filterChain.doFilter(request, response);
+            
+        } catch (io.jsonwebtoken.ExpiredJwtException | io.jsonwebtoken.security.SignatureException e) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"status\": 401, \"error\":\"No autorizado\",\"message\":\"El token es invalido o ha expirado.\"}");
+            return;
+        } catch (io.jsonwebtoken.JwtException e) {
+            logger.error("JWT error: " + e.getMessage(), e);
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"status\": 401, \"error\":\"No autorizado\",\"message\":\"El token es invalido.\"}");
+            return;
         }
-
-        filterChain.doFilter(request, response);
     }
 
     private List<SimpleGrantedAuthority> extractAuthorities(String token) {

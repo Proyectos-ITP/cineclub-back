@@ -14,7 +14,7 @@ import java.util.Map;
 
 @Component
 public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
-
+    
     @Override
     public void commence(
             HttpServletRequest request,
@@ -31,7 +31,6 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
         body.put("message", "Authentication token is missing or invalid");
         body.put("path", request.getRequestURI());
 
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.writeValue(response.getOutputStream(), body);
+        new ObjectMapper().writeValue(response.getOutputStream(), body);
     }
 }

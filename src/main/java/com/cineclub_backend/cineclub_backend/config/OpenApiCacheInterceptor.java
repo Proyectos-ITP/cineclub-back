@@ -15,8 +15,7 @@ public class OpenApiCacheInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        // Agregar headers de caché HTTP
-        response.setHeader("Cache-Control", "public, max-age=3600"); // 1 hora
+        response.setHeader("Cache-Control", "public, max-age=3600");
         response.setHeader("Vary", "Accept-Encoding");
         return true;
     }

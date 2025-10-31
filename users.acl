@@ -1,0 +1,9 @@
+# Redis ACL file (Template)
+# This file will be generated dynamically by init-redis.sh
+# using environment variables from .env file
+
+# Default user (disabled for security)
+user default off
+
+# Application user will be created dynamically
+# Format: user ${SPRING_REDIS_USER} on >${SPRING_REDIS_PASSWORD} ~* &* +@all

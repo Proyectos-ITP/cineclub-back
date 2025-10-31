@@ -2,13 +2,20 @@ FROM eclipse-temurin:17-jdk
 
 WORKDIR /app
 
+# Copiar archivos de Maven wrapper y pom.xml primero (para aprovechar el caché)
 COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
 
+# Dar permisos de ejecución
 RUN chmod +x mvnw
-RUN ./mvnw dependency:go-offline
+
+# Descargar dependencias (esta capa se cachea si pom.xml no cambia)
+RUN ./mvnw dependency:go-offline -B || true
+
+# Copiar el código fuente
+COPY src ./src
 
 EXPOSE 8080
 
-CMD ["./mvnw", "spring-boot:run", "-Dspring-boot.run.fork=false"]
+CMD ["./mvnw", "spring-boot:run", "-Dspring-boot.run.jvmArguments='-Dspring.devtools.restart.enabled=true'"]

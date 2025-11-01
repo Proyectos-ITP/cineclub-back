@@ -151,8 +151,8 @@ public class CrudFriendsRequestsService {
             job.put("to", sender.getEmail());
             job.put("subject", "Solicitud de amistad aceptada");
             job.put("body", FriendsRequestTemplate.friendRequestAccepted(
-                receiver.getFullName(),
                 sender.getFullName(),
+                receiver.getFullName(),
                 Optional.empty()
             ));
 
@@ -213,8 +213,8 @@ public class CrudFriendsRequestsService {
             job.put("to", sender.getEmail());
             job.put("subject", "Solicitud de amistad rechazada");
             job.put("body", FriendsRequestTemplate.friendRequestRejected(
-                receiver.getFullName(),
                 sender.getFullName(),
+                receiver.getFullName(),
                 Optional.empty()
             ));
 

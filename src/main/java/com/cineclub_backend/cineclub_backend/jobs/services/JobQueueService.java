@@ -25,7 +25,7 @@ public class JobQueueService {
             jobData.put("enqueuedAt", LocalDateTime.now().toString());
             String json = objectMapper.writeValueAsString(jobData);
             redisTemplate.opsForList().rightPush(JOB_QUEUE, json);
-            System.out.println("📦 Job agregado a la cola: " + jobData);
+            System.out.println("📦 Job agregado a la cola: " + jobData.get("type"));
         } catch (Exception e) {
             e.printStackTrace();
         }

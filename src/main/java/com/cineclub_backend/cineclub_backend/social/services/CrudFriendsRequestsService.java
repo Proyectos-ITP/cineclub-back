@@ -1,29 +1,38 @@
 package com.cineclub_backend.cineclub_backend.social.services;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.cineclub_backend.cineclub_backend.jobs.services.JobQueueService;
+import com.cineclub_backend.cineclub_backend.shared.services.EmailService;
+import com.cineclub_backend.cineclub_backend.shared.services.WebSocketNotificationService;
+import com.cineclub_backend.cineclub_backend.shared.templates.FriendsRequestTemplate;
+import com.cineclub_backend.cineclub_backend.social.dtos.FriendRequestNotificationDto;
 import com.cineclub_backend.cineclub_backend.social.models.Friend;
 import com.cineclub_backend.cineclub_backend.social.models.FriendRequest;
 import com.cineclub_backend.cineclub_backend.social.repositories.FriendRequestRepository;
 import com.cineclub_backend.cineclub_backend.social.repositories.FriendsRepository;
+import com.cineclub_backend.cineclub_backend.users.models.User;
+import com.cineclub_backend.cineclub_backend.users.repositories.UserRepository;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
+@RequiredArgsConstructor
 public class CrudFriendsRequestsService {
 
     private final FriendRequestRepository friendRequestRepository;
     private final FriendsRepository friendsRepository;
-
-    public CrudFriendsRequestsService(FriendRequestRepository friendRequestRepository,
-            FriendsRepository friendsRepository) {
-        this.friendRequestRepository = friendRequestRepository;
-        this.friendsRepository = friendsRepository;
-    }
+    private final UserRepository userRepository;
+    private final WebSocketNotificationService notificationService;
+    private final EmailService emailService;
+    private final JobQueueService jobQueueService;
 
     public FriendRequest sendFriendRequest(String userId, String receiverId) {
         Optional<FriendRequest> existingRequest = friendRequestRepository.findBySenderIdAndReceiverId(userId,
@@ -39,7 +48,66 @@ public class CrudFriendsRequestsService {
         friendRequest.setCreatedAt(new Date());
         friendRequest.setStatus("PENDING");
 
-        return friendRequestRepository.save(friendRequest);
+        FriendRequest savedRequest = friendRequestRepository.save(friendRequest);
+
+        System.out.println(savedRequest.getSenderId());
+        System.out.println(savedRequest.getReceiverId());
+
+        sendFriendRequestEmailNotification(savedRequest);
+        sendFriendRequestNotification(savedRequest);
+
+        return savedRequest;
+    }
+
+    private void sendFriendRequestEmailNotification(FriendRequest friendRequest) {
+        User sender = userRepository.findById(friendRequest.getSenderId())
+                .orElse(null);
+        User receiver = userRepository.findById(friendRequest.getReceiverId())
+                .orElse(null);
+
+        if (sender != null && receiver != null) {
+            Map<String, Object> job = new HashMap<>();
+            job.put("type", "EMAIL_FRIEND_REQUEST");
+            job.put("to", receiver.getEmail());
+            job.put("subject", "Solicitud de amistad");
+            job.put("body", FriendsRequestTemplate.friendRequestSent(
+                sender.getFullName(),
+                receiver.getFullName(),
+                            Optional.empty()
+                    )
+            );
+
+            jobQueueService.enqueueJob(job);
+        }
+    } 
+
+    private void sendFriendRequestNotification(FriendRequest friendRequest) {
+        User receiver = userRepository.findById(friendRequest.getReceiverId())
+                .orElse(null);
+
+        System.out.println(receiver.getFullName());
+        System.out.println(receiver.getEmail());
+        System.out.println(receiver.getId());
+        
+        if (receiver != null) {
+            FriendRequestNotificationDto notification = FriendRequestNotificationDto.builder()
+                    .id(friendRequest.getId())
+                    .senderId(friendRequest.getSenderId())
+                    .receiverId(friendRequest.getReceiverId())
+                    .sender(FriendRequestNotificationDto.SenderInfo.builder()
+                            .id(receiver.getId())
+                            .fullName(receiver.getFullName())
+                            .email(receiver.getEmail())
+                            .build())
+                    .createdAt(friendRequest.getCreatedAt())
+                    .status(friendRequest.getStatus())
+                    .build();
+
+            notificationService.sendFriendRequestNotification(
+                    friendRequest.getReceiverId(),
+                    notification
+            );
+        }
     }
 
     @Transactional
@@ -67,7 +135,60 @@ public class CrudFriendsRequestsService {
         friendsRepository.save(friendship2);
 
         friendRequest.setStatus("ACCEPTED");
-        friendRequestRepository.save(friendRequest);
+        FriendRequest updatedRequest = friendRequestRepository.save(friendRequest);
+
+        sendFriendRequestAcceptedEmailNotification(updatedRequest);
+        sendFriendRequestAcceptedNotification(updatedRequest, userId); 
+    }
+
+    private void sendFriendRequestAcceptedEmailNotification(FriendRequest friendRequest) {
+        User sender = userRepository.findById(friendRequest.getSenderId())
+                .orElse(null);
+        User receiver = userRepository.findById(friendRequest.getReceiverId())
+                .orElse(null);
+
+        if (sender != null && receiver != null) {
+            Map<String, Object> job = new HashMap<>();
+            job.put("type", "EMAIL_FRIEND_ACCEPTED");
+            job.put("to", receiver.getEmail());
+            job.put("subject", "Solicitud de amistad aceptada");
+            job.put("body", FriendsRequestTemplate.friendRequestAccepted(
+                sender.getFullName(),
+                receiver.getFullName(),
+                            Optional.empty()
+                    )
+            );
+
+            jobQueueService.enqueueJob(job);
+        }
+    }
+
+    /**
+     * Construye y envía una notificación de solicitud aceptada al remitente original
+     */
+    private void sendFriendRequestAcceptedNotification(FriendRequest friendRequest, String acceptedById) {
+        User acceptedByUser = userRepository.findById(acceptedById)
+                .orElse(null);
+
+        if (acceptedByUser != null) {
+            FriendRequestNotificationDto notification = FriendRequestNotificationDto.builder()
+                    .id(friendRequest.getId())
+                    .senderId(friendRequest.getSenderId())
+                    .receiverId(friendRequest.getReceiverId())
+                    .sender(FriendRequestNotificationDto.SenderInfo.builder()
+                            .id(acceptedByUser.getId())
+                            .fullName(acceptedByUser.getFullName())
+                            .email(acceptedByUser.getEmail())
+                            .build())
+                    .createdAt(friendRequest.getCreatedAt())
+                    .status(friendRequest.getStatus())
+                    .build();
+
+            notificationService.sendFriendRequestAcceptedNotification(
+                    friendRequest.getSenderId(),
+                    notification
+            );
+        }
     }
 
     public void rejectFriendRequest(String userId, String senderId) {
@@ -79,6 +200,29 @@ public class CrudFriendsRequestsService {
         }
 
         friendRequestRepository.delete(friendRequest);
+
+        sendFriendRequestRejectedEmailNotification(friendRequest);
+    }
+
+    private void sendFriendRequestRejectedEmailNotification(FriendRequest friendRequest) {
+        User sender = userRepository.findById(friendRequest.getSenderId())
+                .orElse(null);
+        User receiver = userRepository.findById(friendRequest.getReceiverId())
+                .orElse(null);
+
+        if (sender != null && receiver != null) {
+            Map<String, Object> job = new HashMap<>();
+            job.put("type", "EMAIL_FRIEND_REJECTED");
+            job.put("to", receiver.getEmail());
+            job.put("subject", "Solicitud de amistad rechazada");
+            job.put("body", FriendsRequestTemplate.friendRequestRejected(
+                sender.getFullName(),
+                receiver.getFullName(),
+                Optional.empty()
+            ));
+
+            jobQueueService.enqueueJob(job);
+        }
     }
 
     public List<FriendRequest> getReceivedRequests(String userId) {

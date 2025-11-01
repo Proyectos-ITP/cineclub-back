@@ -18,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.cineclub_backend.cineclub_backend.social.dtos.FriendResponseDto;
-import com.cineclub_backend.cineclub_backend.social.models.Friend;
 import com.cineclub_backend.cineclub_backend.social.models.FriendRequest;
 import com.cineclub_backend.cineclub_backend.social.repositories.FriendRequestRepository;
 import com.cineclub_backend.cineclub_backend.social.repositories.FriendsRepository;

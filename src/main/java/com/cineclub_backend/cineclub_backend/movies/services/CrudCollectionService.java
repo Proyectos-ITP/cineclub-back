@@ -36,15 +36,12 @@ public class CrudCollectionService {
         try {
             List<AggregationOperation> operations = new ArrayList<>();
 
-            // Filtrar por user_id
             if (userId != null && !userId.trim().isEmpty()) {
                 operations.add(Aggregation.match(
                     Criteria.where("user_id").is(userId)
                 ));
             }
 
-            // Lookup para obtener información de las películas
-            // Usamos un pipeline con $lookup para convertir strings a ObjectId
             operations.add(Aggregation.stage(
                 "{ $lookup: { " +
                 "  from: 'movies', " +
@@ -61,21 +58,18 @@ public class CrudCollectionService {
                 "} }"
             ));
 
-            // Si viene título, filtrar por películas que contengan ese título
             if (title != null && !title.trim().isEmpty()) {
                 operations.add(Aggregation.match(
                     Criteria.where("movieDetails.title").regex(title, "i")
                 ));
             }
 
-            // FacetOperation para paginación y conteo
             FacetOperation facetOperation = Aggregation.facet()
                 .and(Aggregation.count().as("total")).as("metadata")
                 .and(
                     Aggregation.sort(pageable.getSort()),
                     Aggregation.skip((long) pageable.getPageNumber() * pageable.getPageSize()),
                     Aggregation.limit(pageable.getPageSize()),
-                    // Proyectar solo id y title de las películas
                     Aggregation.project()
                         .and("_id").as("_id")
                         .and("user_id").as("user_id")
@@ -96,7 +90,6 @@ public class CrudCollectionService {
                 return new PagedResponseDto<>(new PageImpl<>(new ArrayList<>(), pageable, 0));
             }
 
-            // Extraer el total
             long total = 0;
             Object metadataObj = result.get("metadata");
             if (metadataObj instanceof List<?> metadataList && !metadataList.isEmpty()) {
@@ -106,7 +99,6 @@ public class CrudCollectionService {
                 }
             }
 
-            // Extraer los datos
             List<CollectionResponseDto> collectionDtos = new ArrayList<>();
             Object dataObj = result.get("data");
             if (dataObj instanceof List<?> dataList) {
@@ -138,7 +130,6 @@ public class CrudCollectionService {
             dto.setUserId(userIdObj.toString());
         }
 
-        // Convertir la lista de películas con detalles
         Object moviesObj = doc.get("movies");
         if (moviesObj instanceof List<?> moviesList) {
             List<CollectionResponseDto.MovieInfo> movieInfoList = new ArrayList<>();

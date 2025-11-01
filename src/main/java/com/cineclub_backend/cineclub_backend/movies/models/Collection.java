@@ -15,8 +15,8 @@ public class Collection {
     @Id
     private String id;
 
-    @Field("movie_id")
-    private List<String> movieId;
+    @Field("movies")
+    private List<String> movies;
 
     @Field("user_id")
     private String userId;

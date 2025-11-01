@@ -11,4 +11,5 @@ import com.cineclub_backend.cineclub_backend.movies.models.Collection;
 
 @Repository
 public interface CollectionRepository extends MongoRepository<Collection, String> {
+    Optional<Collection> findByUserId(String userId);
 }

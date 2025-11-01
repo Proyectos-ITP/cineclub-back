@@ -18,7 +18,7 @@ import com.cineclub_backend.cineclub_backend.users.models.User;
 import com.cineclub_backend.cineclub_backend.users.services.CrudUserService;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/users")
 public class UserController {
     
     private final CrudUserService crudUserService;

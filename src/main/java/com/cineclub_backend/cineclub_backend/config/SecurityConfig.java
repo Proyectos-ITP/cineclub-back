@@ -33,8 +33,7 @@ public class SecurityConfig {
                                 "/health",
                                 "/v3/api-docs/**",
                                 "/docs/**",
-                                "/actuator/health",
-                                "/scalar/index.html"
+                                "/actuator/health"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

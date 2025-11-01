@@ -7,7 +7,8 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
 @EnableMongoRepositories(basePackages = {
     "com.cineclub_backend.cineclub_backend.movies.repositories",
     "com.cineclub_backend.cineclub_backend.users.repositories",
-    "com.cineclub_backend.cineclub_backend.shared.repositories"
+    "com.cineclub_backend.cineclub_backend.shared.repositories",
+    "com.cineclub_backend.cineclub_backend.social.repositories"
 })
 public class MongoConfig {
 }

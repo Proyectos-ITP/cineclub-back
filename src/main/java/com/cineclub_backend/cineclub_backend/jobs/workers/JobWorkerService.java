@@ -38,6 +38,22 @@ public class JobWorkerService {
                         emailService.sendEmail(to, subject, body);
                         System.out.println("📨 Email enviado a " + to);
                     }
+                    case "EMAIL_FRIEND_REQUEST" -> {
+                        String to = (String) job.get("to");
+                        String subject = (String) job.get("subject");
+                        String body = (String) job.get("body");
+
+                        emailService.sendEmail(to, subject, body);
+                        System.out.println("📨 Email enviado a " + to);
+                    }
+                    case "EMAIL_FRIEND_ACCEPTED" -> {
+                        String to = (String) job.get("to");
+                        String subject = (String) job.get("subject");
+                        String body = (String) job.get("body");
+
+                        emailService.sendEmail(to, subject, body);
+                        System.out.println("📨 Email enviado a " + to);
+                    }
                     default -> System.out.println("⚠️ Tipo de job desconocido: " + type);
                 }
             } catch (Exception e) {

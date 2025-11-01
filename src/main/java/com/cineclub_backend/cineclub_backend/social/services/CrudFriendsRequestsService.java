@@ -10,7 +10,6 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.cineclub_backend.cineclub_backend.jobs.services.JobQueueService;
-import com.cineclub_backend.cineclub_backend.shared.services.EmailService;
 import com.cineclub_backend.cineclub_backend.shared.services.WebSocketNotificationService;
 import com.cineclub_backend.cineclub_backend.shared.templates.FriendsRequestTemplate;
 import com.cineclub_backend.cineclub_backend.social.dtos.FriendRequestNotificationDto;
@@ -31,7 +30,6 @@ public class CrudFriendsRequestsService {
     private final FriendsRepository friendsRepository;
     private final UserRepository userRepository;
     private final WebSocketNotificationService notificationService;
-    private final EmailService emailService;
     private final JobQueueService jobQueueService;
 
     public FriendRequest sendFriendRequest(String userId, String receiverId) {
@@ -150,14 +148,13 @@ public class CrudFriendsRequestsService {
         if (sender != null && receiver != null) {
             Map<String, Object> job = new HashMap<>();
             job.put("type", "EMAIL_FRIEND_ACCEPTED");
-            job.put("to", receiver.getEmail());
+            job.put("to", sender.getEmail());
             job.put("subject", "Solicitud de amistad aceptada");
             job.put("body", FriendsRequestTemplate.friendRequestAccepted(
-                sender.getFullName(),
                 receiver.getFullName(),
-                            Optional.empty()
-                    )
-            );
+                sender.getFullName(),
+                Optional.empty()
+            ));
 
             jobQueueService.enqueueJob(job);
         }
@@ -213,11 +210,11 @@ public class CrudFriendsRequestsService {
         if (sender != null && receiver != null) {
             Map<String, Object> job = new HashMap<>();
             job.put("type", "EMAIL_FRIEND_REJECTED");
-            job.put("to", receiver.getEmail());
+            job.put("to", sender.getEmail());
             job.put("subject", "Solicitud de amistad rechazada");
             job.put("body", FriendsRequestTemplate.friendRequestRejected(
-                sender.getFullName(),
                 receiver.getFullName(),
+                sender.getFullName(),
                 Optional.empty()
             ));
 

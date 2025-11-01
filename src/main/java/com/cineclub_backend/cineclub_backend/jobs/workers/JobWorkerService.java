@@ -1,6 +1,5 @@
 package com.cineclub_backend.cineclub_backend.jobs.workers;
 
-import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.EnableAsync;

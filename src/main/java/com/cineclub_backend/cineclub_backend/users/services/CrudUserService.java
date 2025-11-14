@@ -15,6 +15,7 @@ import org.springframework.data.mongodb.core.aggregation.FacetOperation;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
 
+import com.cineclub_backend.cineclub_backend.users.dtos.UserDto;
 import com.cineclub_backend.cineclub_backend.users.models.User;
 import com.cineclub_backend.cineclub_backend.users.repositories.UserRepository;
 
@@ -108,5 +109,100 @@ public class CrudUserService {
         } catch (Exception e) {
             throw new RuntimeException("Error al obtener usuarios paginados: " + e.getMessage(), e);
         }
+    }
+
+    public Page<UserDto> getNotFriendsPaginated(String userId, String name, String email, Pageable pageable) {
+        try {
+            List<AggregationOperation> operations = new ArrayList<>();
+
+            operations.add(Aggregation.match(Criteria.where("_id").ne(userId)));
+            operations.add(Aggregation.lookup("friends", "_id", "friend_id", "friendships_as_friend"));
+            operations.add(Aggregation.lookup("friends", "_id", "user_id", "friendships_as_user"));
+            operations.add(context -> new Document("$addFields",
+                new Document("all_friendships",
+                    new Document("$concatArrays", List.of("$friendships_as_friend", "$friendships_as_user"))
+                )
+            ));
+
+            Document filterCondition = new Document();
+            filterCondition.append("input", "$all_friendships");
+            filterCondition.append("as", "friendship");
+            filterCondition.append("cond", new Document("$or", List.of(
+                new Document("$eq", List.of("$$friendship.user_id", userId)),
+                new Document("$eq", List.of("$$friendship.friend_id", userId))
+            )));
+
+            operations.add(context -> new Document("$addFields",
+                new Document("is_friend", new Document("$filter", filterCondition))
+            ));
+
+            operations.add(Aggregation.match(Criteria.where("is_friend").size(0)));
+
+            if (name != null && !name.trim().isEmpty()) {
+                operations.add(Aggregation.match(Criteria.where("fullName").regex(name, "i")));
+            }
+
+            if (email != null && !email.trim().isEmpty()) {
+                operations.add(Aggregation.match(Criteria.where("email").regex(email, "i")));
+            }
+
+            operations.add(Aggregation.project()
+                .and("_id").as("id")
+                .and("fullName").as("fullName")
+                .and("email").as("email")
+                .and("country").as("country"));
+
+            FacetOperation facetOperation = Aggregation.facet()
+                .and(Aggregation.count().as("total")).as("metadata")
+                .and(
+                    Aggregation.sort(pageable.getSort()),
+                    Aggregation.skip((long) pageable.getPageNumber() * pageable.getPageSize()),
+                    Aggregation.limit(pageable.getPageSize())
+                ).as("data");
+
+            operations.add(facetOperation);
+
+            Aggregation aggregation = Aggregation.newAggregation(operations);
+            AggregationResults<Document> results = mongoTemplate.aggregate(aggregation, "users", Document.class);
+
+            Document result = results.getUniqueMappedResult();
+
+            if (result == null) {
+                return new PageImpl<>(new ArrayList<>(), pageable, 0);
+            }
+
+            long total = 0;
+            Object metadataObj = result.get("metadata");
+            if (metadataObj instanceof List<?> metadataList && !metadataList.isEmpty()) {
+                Object firstItem = metadataList.get(0);
+                if (firstItem instanceof Document metadataDoc) {
+                    total = metadataDoc.getInteger("total", 0);
+                }
+            }
+
+            List<UserDto> users = new ArrayList<>();
+            Object dataObj = result.get("data");
+            if (dataObj instanceof List<?> dataList) {
+                for (Object item : dataList) {
+                    if (item instanceof Document doc) {
+                        users.add(convertDocumentToUserDto(doc));
+                    }
+                }
+            }
+
+            return new PageImpl<>(users, pageable, total);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error al obtener usuarios que no son amigos: " + e.getMessage(), e);
+        }
+    }
+
+    private UserDto convertDocumentToUserDto(Document doc) {
+        UserDto userDto = new UserDto();
+        userDto.setId(doc.getString("id"));
+        userDto.setFullName(doc.getString("fullName"));
+        userDto.setEmail(doc.getString("email"));
+        userDto.setCountry(doc.getString("country"));
+        return userDto;
     }
 }

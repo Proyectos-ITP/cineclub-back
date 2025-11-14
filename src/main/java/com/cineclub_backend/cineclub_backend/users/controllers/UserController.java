@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -18,6 +19,7 @@ import org.springdoc.core.annotations.ParameterObject;
 import com.cineclub_backend.cineclub_backend.shared.dtos.PagedResponseDto;
 import com.cineclub_backend.cineclub_backend.shared.helpers.SerializeHelper;
 import com.cineclub_backend.cineclub_backend.users.dtos.FindUserDto;
+import com.cineclub_backend.cineclub_backend.users.dtos.UserDto;
 import com.cineclub_backend.cineclub_backend.users.models.User;
 import com.cineclub_backend.cineclub_backend.users.services.CrudUserService;
 
@@ -78,6 +80,17 @@ public class UserController {
     public PagedResponseDto<User> getUsersPaginated(@ParameterObject FindUserDto findUserDto) {
         Page<User> page = crudUserService.getUsersPaginated(findUserDto.getName(), findUserDto.getEmail(),
                 findUserDto.toPageable());
+        return new PagedResponseDto<>(page);
+    }
+
+    @GetMapping("/not-friends")
+    @Operation(summary = "Ver usuarios que no son mis amigos", description = "Obtiene los usuarios paginados que no son mis amigos actualmente")
+    public PagedResponseDto<UserDto> getNotFriendsPaginated(
+            @AuthenticationPrincipal String userId,
+            @ParameterObject FindUserDto findUserDto) {
+
+        Page<UserDto> page = crudUserService.getNotFriendsPaginated(userId, findUserDto.getName(),
+                findUserDto.getEmail(), findUserDto.toPageable());
         return new PagedResponseDto<>(page);
     }
 }

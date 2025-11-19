@@ -80,8 +80,8 @@ public class DiagramController {
             e.printStackTrace();
         }
 
-        // Usar motor SFDP para layout más orgánico y distribuido
-        Graphviz.useEngine(new GraphvizV8Engine());
+        // Usar motor de línea de comandos (requiere graphviz instalado en el sistema)
+        Graphviz.useEngine(new GraphvizCmdLineEngine());
 
         // Crear grafo sin dirección forzada para distribución más natural
         MutableGraph graph = mutGraph("API")
@@ -124,8 +124,7 @@ public class DiagramController {
             List<String> pathsExcluded = List.of("health-controller", "scalar-controller");
 
             if (pathsExcluded.contains(tag)) continue;
-            
-            System.out.println("Tag: " + tag);
+
             controllerNodes.put(tag,
                     mutNode(tag)
                             .add(Style.FILLED)

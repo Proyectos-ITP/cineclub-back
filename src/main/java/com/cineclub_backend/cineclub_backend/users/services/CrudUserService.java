@@ -146,11 +146,63 @@ public class CrudUserService {
                 operations.add(Aggregation.match(Criteria.where("email").regex(email, "i")));
             }
 
+            operations.add(Aggregation.lookup("friendRequests", "_id", "receiver_id", "requests_sent"));
+            operations.add(Aggregation.lookup("friendRequests", "_id", "sender_id", "requests_received"));
+
+            operations.add(context -> new Document("$addFields",
+                new Document("pending_request_sent", new Document("$arrayElemAt", List.of(
+                    new Document("$filter", new Document()
+                        .append("input", "$requests_sent")
+                        .append("as", "req")
+                        .append("cond", new Document("$and", List.of(
+                            new Document("$eq", List.of("$$req.sender_id", userId)),
+                            new Document("$eq", List.of("$$req.status", "PENDING"))
+                        )))
+                    ), 0
+                )))
+                .append("pending_request_received", new Document("$arrayElemAt", List.of(
+                    new Document("$filter", new Document()
+                        .append("input", "$requests_received")
+                        .append("as", "req")
+                        .append("cond", new Document("$and", List.of(
+                            new Document("$eq", List.of("$$req.receiver_id", userId)),
+                            new Document("$eq", List.of("$$req.status", "PENDING"))
+                        )))
+                    ), 0
+                )))
+            ));
+
             operations.add(Aggregation.project()
                 .and("_id").as("id")
                 .and("fullName").as("fullName")
                 .and("email").as("email")
-                .and("country").as("country"));
+                .and("country").as("country")
+                .and(context -> new Document("$cond", List.of(
+                    new Document("$or", List.of(
+                        new Document("$ne", List.of(new Document("$type", "$pending_request_sent"), "missing")),
+                        new Document("$ne", List.of(new Document("$type", "$pending_request_received"), "missing"))
+                    )),
+                    true,
+                    false
+                ))).as("hasPendingRequest")
+                .and(context -> new Document("$cond", List.of(
+                    new Document("$ne", List.of(new Document("$type", "$pending_request_sent"), "missing")),
+                    new Document("$toString", "$pending_request_sent._id"),
+                    new Document("$cond", List.of(
+                        new Document("$ne", List.of(new Document("$type", "$pending_request_received"), "missing")),
+                        new Document("$toString", "$pending_request_received._id"),
+                        "$$REMOVE"
+                    ))
+                ))).as("pendingRequestId")
+                .and(context -> new Document("$cond", List.of(
+                    new Document("$ne", List.of(new Document("$type", "$pending_request_sent"), "missing")),
+                    true,
+                    new Document("$cond", List.of(
+                        new Document("$ne", List.of(new Document("$type", "$pending_request_received"), "missing")),
+                        false,
+                        "$$REMOVE"
+                    ))
+                ))).as("isSender"));
 
             FacetOperation facetOperation = Aggregation.facet()
                 .and(Aggregation.count().as("total")).as("metadata")
@@ -203,6 +255,14 @@ public class CrudUserService {
         userDto.setFullName(doc.getString("fullName"));
         userDto.setEmail(doc.getString("email"));
         userDto.setCountry(doc.getString("country"));
+        userDto.setHasPendingRequest(doc.getBoolean("hasPendingRequest", false));
+
+        Object pendingRequestId = doc.get("pendingRequestId");
+        if (pendingRequestId != null) {
+            userDto.setPendingRequestId(pendingRequestId.toString());
+        }
+
+        userDto.setIsSender(doc.getBoolean("isSender"));
         return userDto;
     }
 }

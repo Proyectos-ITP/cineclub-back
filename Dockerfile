@@ -16,6 +16,9 @@ RUN mvn clean package -DskipTests -B
 # Stage 2: Runtime
 FROM eclipse-temurin:21-jre-alpine
 
+# Instalar Graphviz para generación de diagramas
+RUN apk add --no-cache graphviz
+
 # Crear usuario no-root para seguridad
 RUN addgroup -g 1001 -S appgroup && \
     adduser -u 1001 -S appuser -G appgroup

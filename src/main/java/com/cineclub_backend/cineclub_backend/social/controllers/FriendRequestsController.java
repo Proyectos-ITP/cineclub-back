@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -80,5 +81,15 @@ public class FriendRequestsController {
 
         List<FriendRequest> requests = crudFriendsRequests.getSentRequests(userId);
         return ResponseEntity.ok(ApiResponse.success(requests));
+    }
+
+    @DeleteMapping("/cancel/{receiverId}")
+    @Operation(summary = "Cancelar solicitud de amistad", description = "Cancela una solicitud de amistad enviada")
+    public ResponseEntity<ApiResponse<String>> cancelFriendRequest(
+            @PathVariable String receiverId,
+            @AuthenticationPrincipal String userId) {
+
+        crudFriendsRequests.cancelFriendRequest(userId, receiverId);
+        return ResponseEntity.ok(ApiResponse.success("Solicitud de amistad cancelada exitosamente", null));
     }
 }

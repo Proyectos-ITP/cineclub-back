@@ -236,4 +236,15 @@ public class CrudFriendsRequestsService {
                 .filter(req -> "PENDING".equals(req.getStatus()))
                 .collect(Collectors.toList());
     }
+
+    public void cancelFriendRequest(String userId, String receiverId) {
+        FriendRequest friendRequest = friendRequestRepository.findBySenderIdAndReceiverId(userId, receiverId)
+                .orElseThrow(() -> new RuntimeException("No se encontró la solicitud de amistad"));
+
+        if (!"PENDING".equals(friendRequest.getStatus())) {
+            throw new RuntimeException("La solicitud ya fue procesada");
+        }
+
+        friendRequestRepository.delete(friendRequest);
+    }
 }

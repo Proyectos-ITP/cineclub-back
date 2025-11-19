@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cineclub API - Documentación Interactiva</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      .api-container {
+        position: relative;
+        min-height: 100vh;
+        background: #0a0e27;
+      }
+
+      .architecture-diagram {
+        background: #1a1e3e;
+        padding: 2rem;
+        margin: 0;
+        border-bottom: 1px solid #667eea30;
+      }
+
+      .diagram-title {
+        color: #fff;
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        text-align: center;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+          Roboto, sans-serif;
+      }
+
+      .diagram-container {
+        max-width: 900px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+        align-items: center;
+      }
+
+      .diagram-row {
+        display: flex;
+        gap: 2rem;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .diagram-node {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 1.2rem 1.5rem;
+        border-radius: 12px;
+        color: #fff;
+        font-weight: 600;
+        text-align: center;
+        min-width: 140px;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+          Roboto, sans-serif;
+        font-size: 0.9rem;
+        position: relative;
+        transition: transform 0.2s;
+      }
+
+      .diagram-node:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+      }
+
+      .diagram-node.client {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      }
+
+      .diagram-node.auth {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+      }
+
+      .diagram-node.mongo {
+        background: linear-gradient(135deg, #47a248 0%, #3f9142 100%);
+      }
+
+      .diagram-node.redis {
+        background: linear-gradient(135deg, #dc382d 0%, #c5302a 100%);
+      }
+
+      .diagram-node.email {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      }
+
+      .diagram-node.ws {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      }
+
+      .diagram-arrow {
+        color: #667eea;
+        font-size: 2rem;
+        font-weight: bold;
+      }
+
+      .diagram-label {
+        font-size: 0.75rem;
+        color: #aaa;
+        margin-top: 0.3rem;
+      }
+
+      .endpoint-group {
+        margin-bottom: 1.5rem;
+        width: 100%;
+        max-width: 800px;
+      }
+
+      .endpoint-group-title {
+        color: #667eea;
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin-bottom: 0.8rem;
+        padding: 0.5rem 1rem;
+        background: rgba(102, 126, 234, 0.1);
+        border-left: 4px solid #667eea;
+        border-radius: 4px;
+      }
+
+      .endpoint-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        padding-left: 1rem;
+      }
+
+      .endpoint-item {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        padding: 0.6rem 1rem;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 6px;
+        transition: all 0.2s;
+        border-left: 3px solid transparent;
+      }
+
+      .endpoint-item:hover {
+        background: rgba(102, 126, 234, 0.1);
+        border-left-color: #667eea;
+        transform: translateX(4px);
+      }
+
+      .endpoint-method {
+        padding: 0.3rem 0.6rem;
+        border-radius: 4px;
+        font-weight: 700;
+        font-size: 0.75rem;
+        min-width: 60px;
+        text-align: center;
+        color: #fff;
+      }
+
+      .method-get {
+        background: #61affe;
+      }
+      .method-post {
+        background: #49cc90;
+      }
+      .method-put {
+        background: #fca130;
+      }
+      .method-delete {
+        background: #f93e3e;
+      }
+      .method-patch {
+        background: #50e3c2;
+      }
+
+      .endpoint-path {
+        color: #ddd;
+        font-family: 'Courier New', monospace;
+        font-size: 0.85rem;
+        flex: 1;
+      }
+
+      .endpoint-summary {
+        color: #aaa;
+        font-size: 0.75rem;
+        font-style: italic;
+      }
+
+      .api-reference-wrapper {
+        position: relative;
+        background: #0a0e27;
+      }
+
+      ::-webkit-scrollbar {
+        width: 12px;
+        height: 12px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: #1a1e3e;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #667eea60 0%, #764ba260 100%);
+        border-radius: 6px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(135deg, #764ba260 0%, #667eea60 100%);
+      }
+
+      .loading {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 400px;
+        color: #667eea;
+        font-size: 1.2rem;
+      }
+
+      @media (max-width: 768px) {
+        .architecture-diagram {
+          padding: 1.5rem 1rem;
+        }
+
+        .diagram-title {
+          font-size: 1.2rem;
+        }
+
+        .diagram-node {
+          min-width: 120px;
+          padding: 1rem;
+          font-size: 0.85rem;
+        }
+
+        .diagram-arrow {
+          font-size: 1.5rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="api-container">
+      <div class="api-reference-wrapper">
+        <script
+          id="api-reference"
+          data-url="/v3/api-docs"
+          data-configuration='{
+                "theme": "deepSpace",
+                "hideClientButton": true,
+                "showSidebar": true,
+                "showToolbar": "localhost",
+                "operationTitleSource": "summary",
+                "persistAuth": true,
+                "telemetry": false,
+                "layout": "modern",
+                "isEditable": false,
+                "hideModels": false,
+                "documentDownloadType": "both",
+                "hideTestRequestButton": false,
+                "hideSearch": false,
+                "showOperationId": false,
+                "hideDarkModeToggle": false,
+                "withDefaultFonts": false,
+                "defaultOpenAllTags": false,
+                "expandAllModelSections": false,
+                "expandAllResponses": false,
+                "orderSchemaPropertiesBy": "alpha",
+                "orderRequiredPropertiesFirst": true,
+                "authentication": {
+                    "preferredSecurityScheme": "Bearer Authentication",
+                    "http": {
+                        "bearer": {
+                            "token": ""
+                        }
+                    }
+                },
+                "hideDownloadButton": false,
+                "darkMode": true,
+                "hiddenClients": [],
+                "customCss": ".scalar-api-reference { font-family: Inter, system-ui, sans-serif; }"
+            }'
+        ></script>
+        <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+      </div>
+    </div>
+  </body>
+</html>

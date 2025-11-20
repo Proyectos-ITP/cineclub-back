@@ -49,4 +49,14 @@ public class WebSocketNotificationService {
     public void sendFriendRequestAcceptedNotification(String userId, Object notification) {
         sendNotificationToUser(userId, "/queue/friend-requests-accepted", notification);
     }
+
+    /**
+     * Envía una notificación de solicitud de compartir colección
+     *
+     * @param userId ID del usuario destinatario
+     * @param notification DTO con la información de la solicitud
+     */
+    public void sendCollectionRequestNotification(String userId, Object notification) {
+        sendNotificationToUser(userId, "/queue/collection-requests", notification);
+    }
 }

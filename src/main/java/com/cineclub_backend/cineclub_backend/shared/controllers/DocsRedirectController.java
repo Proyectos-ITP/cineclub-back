@@ -9,11 +9,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class DocsRedirectController {
 
-    /**
-     * Redirige /docs a la página HTML personalizada de Scalar con persistencia de token
-     */
-    @GetMapping("/docs")
-    public String redirectToDocs() {
-        return "forward:/api-docs.html";
-    }
+  /**
+   * Redirige /docs a la página HTML personalizada de Scalar con persistencia de token
+   */
+  @GetMapping("/docs")
+  public String redirectToDocs() {
+    return "forward:/api-docs.html";
+  }
 }

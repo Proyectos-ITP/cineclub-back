@@ -58,3 +58,6 @@ Thumbs.db
 
 ### Otros ###
 .spring-boot-devtools.properties
+
+### Node ###
+node_modules

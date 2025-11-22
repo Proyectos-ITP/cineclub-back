@@ -7,13 +7,14 @@ import lombok.Data;
 
 @Data
 public class CreateDirectorDto {
-    @NotBlank(message = "El director no puede estar vacio")
-    @Size(max = 255)
-    @Schema(example = "Jon Doe")
-    private String director;
 
-    @NotBlank(message = "El movieId no puede estar vacio")
-    @Size(max = 255)
-    @Schema(example = "123")
-    private String movieId;
+  @NotBlank(message = "El director no puede estar vacio")
+  @Size(max = 255)
+  @Schema(example = "Jon Doe")
+  private String director;
+
+  @NotBlank(message = "El movieId no puede estar vacio")
+  @Size(max = 255)
+  @Schema(example = "123")
+  private String movieId;
 }

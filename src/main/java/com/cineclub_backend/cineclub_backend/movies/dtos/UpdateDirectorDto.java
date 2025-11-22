@@ -6,12 +6,12 @@ import lombok.Data;
 
 @Data
 public class UpdateDirectorDto {
-    @Size(max = 255)
-    @Schema(example = "Jon Doe")
-    private String director;
 
-    @Size(max = 255)
-    @Schema(example = "123")
-    private String movieId;
+  @Size(max = 255)
+  @Schema(example = "Jon Doe")
+  private String director;
 
+  @Size(max = 255)
+  @Schema(example = "123")
+  private String movieId;
 }

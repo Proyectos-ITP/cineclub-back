@@ -23,75 +23,75 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Value("${docs.username}")
-    private String docsUsername;
+  @Value("${docs.username}")
+  private String docsUsername;
 
-    @Value("${docs.password}")
-    private String docsPassword;
+  @Value("${docs.password}")
+  private String docsPassword;
 
-    private final JwtAuthenticationFilter jwtAuthFilter;
-    private final JwtAuthenticationEntryPoint jwtAuthEntryPoint;
+  private final JwtAuthenticationFilter jwtAuthFilter;
+  private final JwtAuthenticationEntryPoint jwtAuthEntryPoint;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter, JwtAuthenticationEntryPoint jwtAuthEntryPoint) {
-        this.jwtAuthFilter = jwtAuthFilter;
-        this.jwtAuthEntryPoint = jwtAuthEntryPoint;
-    }
+  public SecurityConfig(
+    JwtAuthenticationFilter jwtAuthFilter,
+    JwtAuthenticationEntryPoint jwtAuthEntryPoint
+  ) {
+    this.jwtAuthFilter = jwtAuthFilter;
+    this.jwtAuthEntryPoint = jwtAuthEntryPoint;
+  }
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+  @Bean
+  public PasswordEncoder passwordEncoder() {
+    return new BCryptPasswordEncoder();
+  }
 
-    @Bean
-    public UserDetailsService userDetailsService() {
-        UserDetails user = User.builder()
-                .username(docsUsername)
-                .password(passwordEncoder().encode(docsPassword))
-                .roles("DOCS")
-                .build();
-        return new InMemoryUserDetailsManager(user);
-    }
+  @Bean
+  public UserDetailsService userDetailsService() {
+    UserDetails user = User.builder()
+      .username(docsUsername)
+      .password(passwordEncoder().encode(docsPassword))
+      .roles("DOCS")
+      .build();
+    return new InMemoryUserDetailsManager(user);
+  }
 
-    @Bean
-    @Order(1)
-    public SecurityFilterChain docsSecurityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .securityMatcher("/docs", "/api-docs.html")
-                .authorizeHttpRequests(auth -> auth
-                        .anyRequest().authenticated()
-                )
-                .httpBasic(basic -> {})
-                .csrf(AbstractHttpConfigurer::disable);
+  @Bean
+  @Order(1)
+  public SecurityFilterChain docsSecurityFilterChain(HttpSecurity http) throws Exception {
+    http
+      .securityMatcher("/docs", "/api-docs.html")
+      .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
+      .httpBasic(basic -> {})
+      .csrf(AbstractHttpConfigurer::disable);
 
-        return http.build();
-    }
+    return http.build();
+  }
 
-    @Bean
-    @Order(2)
-    public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .securityMatcher("/**")
-                .cors(cors -> cors.configure(http))
-                .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/",
-                                "/health",
-                                "/actuator/health",
-                                "/ws/**",
-                                "/v3/api-docs/**",
-                                "/diagram.svg"
-                        ).permitAll()
-                        .anyRequest().authenticated()
-                )
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
-                .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint(jwtAuthEntryPoint)
-                )
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+  @Bean
+  @Order(2)
+  public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
+    http
+      .securityMatcher("/**")
+      .cors(cors -> cors.configure(http))
+      .csrf(AbstractHttpConfigurer::disable)
+      .authorizeHttpRequests(auth ->
+        auth
+          .requestMatchers(
+            "/",
+            "/health",
+            "/actuator/health",
+            "/ws/**",
+            "/v3/api-docs/**",
+            "/diagram.svg"
+          )
+          .permitAll()
+          .anyRequest()
+          .authenticated()
+      )
+      .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+      .exceptionHandling(exception -> exception.authenticationEntryPoint(jwtAuthEntryPoint))
+      .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
-        return http.build();
-    }
+    return http.build();
+  }
 }

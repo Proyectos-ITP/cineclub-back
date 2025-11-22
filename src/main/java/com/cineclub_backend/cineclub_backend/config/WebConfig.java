@@ -11,39 +11,41 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebConfig {
 
-    @Value("${cors.allowed-origins}")
-    private String[] allowedOrigins;
+  @Value("${cors.allowed-origins}")
+  private String[] allowedOrigins;
 
-    @Value("${cors.allowed-methods}")
-    private String[] allowedMethods;
+  @Value("${cors.allowed-methods}")
+  private String[] allowedMethods;
 
-    @Value("${cors.allowed-headers}")
-    private String[] allowedHeaders;
+  @Value("${cors.allowed-headers}")
+  private String[] allowedHeaders;
 
-    @Value("${cors.allow-credentials}")
-    private boolean allowCredentials;
+  @Value("${cors.allow-credentials}")
+  private boolean allowCredentials;
 
-    @Autowired
-    private OpenApiCacheInterceptor openApiCacheInterceptor;
+  @Autowired
+  private OpenApiCacheInterceptor openApiCacheInterceptor;
 
-    @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/**")
-                        .allowedOrigins(allowedOrigins)
-                        .allowedMethods(allowedMethods)
-                        .allowedHeaders(allowedHeaders)
-                        .allowCredentials(allowCredentials);
-            }
+  @Bean
+  public WebMvcConfigurer corsConfigurer() {
+    return new WebMvcConfigurer() {
+      @Override
+      public void addCorsMappings(CorsRegistry registry) {
+        registry
+          .addMapping("/**")
+          .allowedOrigins(allowedOrigins)
+          .allowedMethods(allowedMethods)
+          .allowedHeaders(allowedHeaders)
+          .allowCredentials(allowCredentials);
+      }
 
-            @Override
-            public void addInterceptors(InterceptorRegistry registry) {
-                // Agregar caché HTTP headers a endpoints de documentación
-                registry.addInterceptor(openApiCacheInterceptor)
-                        .addPathPatterns("/v3/api-docs/**", "/docs/**");
-            }
-        };
-    }
+      @Override
+      public void addInterceptors(InterceptorRegistry registry) {
+        // Agregar caché HTTP headers a endpoints de documentación
+        registry
+          .addInterceptor(openApiCacheInterceptor)
+          .addPathPatterns("/v3/api-docs/**", "/docs/**");
+      }
+    };
+  }
 }

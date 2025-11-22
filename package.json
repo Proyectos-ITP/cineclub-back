@@ -1,0 +1,23 @@
+{
+  "name": "cineclub-backend",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "format": "prettier --write \"**/*.{java,js,ts,css,html,json,md}\"",
+    "lint": "docker exec cineclub_backend_dev ./mvnw checkstyle:check",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.1.0",
+    "@commitlint/config-conventional": "^20.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.3.2",
+    "prettier-plugin-java": "^2.5.0"
+  },
+  "lint-staged": {
+    "**/*.{java,js,ts,css,html,json,md}": [
+      "prettier --write"
+    ]
+  }
+}

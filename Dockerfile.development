@@ -1,6 +1,5 @@
 FROM eclipse-temurin:17-jdk
 
-# Instalar Graphviz para generación de diagramas
 RUN apt-get update && apt-get install -y graphviz && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -9,6 +8,7 @@ COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
 COPY src src
+COPY checkstyle.xml .
 
 RUN chmod +x mvnw
 RUN ./mvnw dependency:go-offline

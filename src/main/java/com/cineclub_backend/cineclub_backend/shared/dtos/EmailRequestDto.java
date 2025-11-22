@@ -11,13 +11,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class EmailRequestDto {
 
-    @NotBlank(message = "El destinatario es obligatorio")
-    @Email(message = "El email debe ser válido")
-    private String to;
+  @NotBlank(message = "El destinatario es obligatorio")
+  @Email(message = "El email debe ser válido")
+  private String to;
 
-    @NotBlank(message = "El asunto es obligatorio")
-    private String subject;
+  @NotBlank(message = "El asunto es obligatorio")
+  private String subject;
 
-    @NotBlank(message = "El mensaje es obligatorio")
-    private String text;
+  @NotBlank(message = "El mensaje es obligatorio")
+  private String text;
 }

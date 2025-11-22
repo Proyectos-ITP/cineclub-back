@@ -7,7 +7,7 @@ import lombok.Data;
 @Data
 public class FindDirectoMoviesDto {
 
-    @NotEmpty(message = "Director is required")
-    @Schema(example = "Jon Doe")
-    private String director;
+  @NotEmpty(message = "Director is required")
+  @Schema(example = "Jon Doe")
+  private String director;
 }

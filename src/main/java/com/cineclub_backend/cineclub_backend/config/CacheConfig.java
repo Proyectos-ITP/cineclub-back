@@ -3,7 +3,6 @@ package com.cineclub_backend.cineclub_backend.config;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
@@ -19,30 +18,28 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @EnableCaching
 public class CacheConfig {
 
-    @Bean
-    public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
-        RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
-            .entryTtl(Duration.ofHours(1))
-            .serializeKeysWith(
-                RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer())
-            )
-            .serializeValuesWith(
-                RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer())
-            );
+  @Bean
+  public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
+    RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
+      .entryTtl(Duration.ofHours(1))
+      .serializeKeysWith(
+        RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer())
+      )
+      .serializeValuesWith(
+        RedisSerializationContext.SerializationPair.fromSerializer(
+          new GenericJackson2JsonRedisSerializer()
+        )
+      );
 
-        Map<String, RedisCacheConfiguration> cacheConfigurations = new HashMap<>();
+    Map<String, RedisCacheConfiguration> cacheConfigurations = new HashMap<>();
 
-        cacheConfigurations.put("movies:details", defaultConfig
-            .entryTtl(Duration.ofMinutes(15))
-        );
+    cacheConfigurations.put("movies:details", defaultConfig.entryTtl(Duration.ofMinutes(15)));
 
-        cacheConfigurations.put("directors:details", defaultConfig
-            .entryTtl(Duration.ofMinutes(15))
-        );
+    cacheConfigurations.put("directors:details", defaultConfig.entryTtl(Duration.ofMinutes(15)));
 
-        return RedisCacheManager.builder(connectionFactory)
-            .cacheDefaults(defaultConfig)
-            .withInitialCacheConfigurations(cacheConfigurations)
-            .build();
-    }
+    return RedisCacheManager.builder(connectionFactory)
+      .cacheDefaults(defaultConfig)
+      .withInitialCacheConfigurations(cacheConfigurations)
+      .build();
+  }
 }

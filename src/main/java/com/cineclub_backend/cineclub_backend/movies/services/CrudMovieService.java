@@ -155,7 +155,7 @@ public class CrudMovieService {
     return dto;
   }
 
-  @Cacheable(value = "movies:details", key = "#id")
+  @Cacheable(value = "movies:details", key = "#p0", condition = "#id != null")
   public MovieDto getMovieById(String id) {
     Movie movie = movieRepository
       .findById(id)

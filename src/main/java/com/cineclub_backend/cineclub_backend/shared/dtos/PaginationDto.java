@@ -15,14 +15,14 @@ public class PaginationDto {
   @Schema(defaultValue = "10")
   private int size = 10;
 
-  @Schema(defaultValue = "id,asc")
-  private String[] sort = { "id", "asc" };
+  @Schema(defaultValue = "created_at,asc")
+  private String[] sort = { "created_at", "asc" };
 
   public Pageable toPageable() {
     int pageNumber = page > 0 ? page - 1 : 0;
 
     if (sort == null || sort.length < 2) {
-      return PageRequest.of(pageNumber, size, Sort.by(Sort.Direction.ASC, "id"));
+      return PageRequest.of(pageNumber, size, Sort.by(Sort.Direction.ASC, "created_at"));
     }
 
     Sort.Direction direction = Sort.Direction.fromString(sort[1]);

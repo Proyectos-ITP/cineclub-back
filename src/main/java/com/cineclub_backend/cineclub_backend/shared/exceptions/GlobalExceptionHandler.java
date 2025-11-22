@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @ControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -35,5 +36,16 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
     ApiResponse<Void> response = ApiResponse.serverError(ex.getMessage());
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+  }
+
+  @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+  public ResponseEntity<Object> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+    String message = String.format(
+      "El campo '%s' debe ser del tipo '%s'.",
+      ex.getName(),
+      ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "desconocido"
+    );
+
+    return ResponseEntity.badRequest().body(ApiResponse.badRequest(message));
   }
 }

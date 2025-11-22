@@ -12,6 +12,7 @@ public class FindReviewPagedDto extends PaginationDto {
   private String movieId;
   private String gender;
   private String directorId;
+  private Integer rating;
   private Date startDate;
   private Date endDate;
 }

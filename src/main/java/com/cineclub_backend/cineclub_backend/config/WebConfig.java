@@ -41,7 +41,6 @@ public class WebConfig {
 
       @Override
       public void addInterceptors(InterceptorRegistry registry) {
-        // Agregar caché HTTP headers a endpoints de documentación
         registry
           .addInterceptor(openApiCacheInterceptor)
           .addPathPatterns("/v3/api-docs/**", "/docs/**");

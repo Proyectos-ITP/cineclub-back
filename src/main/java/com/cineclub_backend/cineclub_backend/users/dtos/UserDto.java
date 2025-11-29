@@ -14,8 +14,7 @@ public class UserDto {
   private String email;
   private String country;
 
-  // Campos para solicitudes de amistad pendientes
   private Boolean hasPendingRequest;
   private String pendingRequestId;
-  private Boolean isSender; // true si el usuario actual envió la solicitud, false si la recibió
+  private Boolean isSender;
 }

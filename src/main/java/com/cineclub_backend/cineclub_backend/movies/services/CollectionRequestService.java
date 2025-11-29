@@ -44,7 +44,6 @@ public class CollectionRequestService {
 
   @Transactional
   public void sendCollection(String senderId, String receiverId) {
-    // Verificar si ya existe una solicitud pendiente
     if (
       collectionRequestRepository
         .findBySenderIdAndReceiverIdAndStatus(senderId, receiverId, "PENDING")
@@ -65,11 +64,10 @@ public class CollectionRequestService {
     request.setReceiverId(receiverId);
     collectionRequestRepository.save(request);
 
-    // Notificar por Email (vía Job Queue)
     String emailBody = CollectionRequestTemplate.collectionShared(
       sender.getFullName(),
       receiver.getFullName(),
-      Optional.empty() // TODO: Agregar URL del frontend cuando esté lista
+      Optional.empty()
     );
 
     Map<String, Object> jobData = new HashMap<>();
@@ -80,7 +78,6 @@ public class CollectionRequestService {
 
     jobQueueService.enqueueJob(jobData);
 
-    // Notificar por WebSocket
     CollectionRequestResponseDto notificationDto = toDto(request, sender);
     webSocketNotificationService.sendCollectionRequestNotification(receiverId, notificationDto);
   }
@@ -113,12 +110,10 @@ public class CollectionRequestService {
       throw new RuntimeException("Esta solicitud ya ha sido procesada");
     }
 
-    // Obtener colección del sender
     Collection senderCollection = collectionRepository
       .findByUserId(request.getSenderId())
       .orElseThrow(() -> new RuntimeException("El remitente no tiene colección"));
 
-    // Obtener o crear colección del receiver
     Collection receiverCollection = collectionRepository
       .findByUserId(userId)
       .orElse(new Collection());
@@ -128,7 +123,6 @@ public class CollectionRequestService {
       receiverCollection.setMovies(new ArrayList<>());
     }
 
-    // Fusionar películas
     List<String> receiverMovies = receiverCollection.getMovies();
     if (receiverMovies == null) {
       receiverMovies = new ArrayList<>();
@@ -145,7 +139,6 @@ public class CollectionRequestService {
     receiverCollection.setMovies(receiverMovies);
     collectionRepository.save(receiverCollection);
 
-    // Actualizar estado de la solicitud
     request.setStatus("ACCEPTED");
     collectionRequestRepository.save(request);
   }

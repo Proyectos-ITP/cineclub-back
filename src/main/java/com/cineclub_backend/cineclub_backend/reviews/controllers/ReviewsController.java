@@ -73,7 +73,6 @@ public class ReviewsController {
     @RequestBody @Valid CreateReviewDto createReviewDto,
     @AuthenticationPrincipal String userId
   ) {
-    System.out.println("createReviewDto: " + createReviewDto.toString());
     String rowId = crudReviewService.createReview(createReviewDto, userId);
     return ResponseEntity.status(HttpStatus.CREATED).body(
       ApiResponse.created("La reseña se agregó a tu biblioteca.", rowId)

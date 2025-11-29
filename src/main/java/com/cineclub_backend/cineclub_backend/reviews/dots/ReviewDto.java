@@ -15,6 +15,9 @@ public class ReviewDto {
   private String posterPath;
   private String movieId;
   private String userId;
+  private boolean liked;
+  private Integer likes;
+  private Integer comments;
   private Date createdAt;
   private Date updatedAt;
 }

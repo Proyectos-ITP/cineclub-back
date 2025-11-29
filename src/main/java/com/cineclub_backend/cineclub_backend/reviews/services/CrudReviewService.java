@@ -31,20 +31,27 @@ public class CrudReviewService {
   private final ReviewRepository reviewRepository;
   private final CrudMovieService movieService;
   private final CrudCommentService commentService;
+  private final CrudReviewLikeService reviewLikeService;
 
   public CrudReviewService(
     MongoTemplate mongoTemplate,
     ReviewRepository reviewRepository,
     CrudMovieService movieService,
-    CrudCommentService commentService
+    CrudCommentService commentService,
+    CrudReviewLikeService reviewLikeService
   ) {
     this.mongoTemplate = mongoTemplate;
     this.reviewRepository = reviewRepository;
     this.movieService = movieService;
     this.commentService = commentService;
+    this.reviewLikeService = reviewLikeService;
   }
 
-  public Page<ReviewDto> getPagedReviews(FindReviewPagedDto params, String userId) {
+  public Page<ReviewDto> getPagedReviews(
+    FindReviewPagedDto params,
+    String userId,
+    String loggedUserId
+  ) {
     Pageable pageable = params.toPageable();
 
     List<AggregationOperation> operations = new ArrayList<>();
@@ -100,6 +107,26 @@ public class CrudReviewService {
         Aggregation.sort(pageable.getSort()),
         Aggregation.skip((long) pageable.getPageNumber() * pageable.getPageSize()),
         Aggregation.limit(pageable.getPageSize()),
+        Aggregation.stage(
+          "{$lookup: { " +
+            "  from: 'review_likes', " +
+            "  let: { review_id_str: { $toString: '$_id' } }, " +
+            "  pipeline: [ " +
+            "    { $match: { $expr: { $eq: ['$review_id', '$$review_id_str'] } } } " +
+            "  ], " +
+            "  as: 'review_likes' " +
+            "} }"
+        ),
+        Aggregation.stage(
+          "{$lookup: { " +
+            "  from: 'comments', " +
+            "  let: { review_id_str: { $toString: '$_id' } }, " +
+            "  pipeline: [ " +
+            "    { $match: { $expr: { $eq: ['$review_id', '$$review_id_str'] } } } " +
+            "  ], " +
+            "  as: 'comments' " +
+            "} }"
+        ),
         Aggregation.project()
           .and("_id")
           .as("id")
@@ -123,6 +150,10 @@ public class CrudReviewService {
           .as("createdAt")
           .and("updated_at")
           .as("updatedAt")
+          .and("review_likes")
+          .as("reviewLikes")
+          .and("comments")
+          .as("comments")
       )
       .as("data");
 
@@ -147,7 +178,10 @@ public class CrudReviewService {
 
     @SuppressWarnings("unchecked")
     List<Document> data = (List<Document>) result.get("data");
-    List<ReviewDto> reviewDtos = data.stream().map(this::documentToDto).toList();
+    List<ReviewDto> reviewDtos = data
+      .stream()
+      .map(doc -> documentToDto(doc, loggedUserId))
+      .toList();
 
     return new PageImpl<>(reviewDtos, pageable, total);
   }
@@ -189,7 +223,7 @@ public class CrudReviewService {
     return reviewRepository.findById(id).orElse(null);
   }
 
-  public ReviewDto getReviewById(String id) {
+  public ReviewDto getReviewById(String id, String userId) {
     List<AggregationOperation> operations = new ArrayList<>();
     operations.add(Aggregation.match(Criteria.where("_id").is(id)));
     operations.add(
@@ -201,6 +235,30 @@ public class CrudReviewService {
           "    { $match: { $expr: { $eq: [{ $toString: '$_id' }, '$$movie_id_str'] } } } " +
           "  ], " +
           "  as: 'movie' " +
+          "} }"
+      )
+    );
+    operations.add(
+      Aggregation.stage(
+        "{$lookup: { " +
+          "  from: 'review_likes', " +
+          "  let: { review_id_str: { $toString: '$_id' } }, " +
+          "  pipeline: [ " +
+          "    { $match: { $expr: { $eq: ['$review_id', '$$review_id_str'] } } } " +
+          "  ], " +
+          "  as: 'review_likes' " +
+          "} }"
+      )
+    );
+    operations.add(
+      Aggregation.stage(
+        "{$lookup: { " +
+          "  from: 'comments', " +
+          "  let: { review_id_str: { $toString: '$_id' } }, " +
+          "  pipeline: [ " +
+          "    { $match: { $expr: { $eq: ['$review_id', '$$review_id_str'] } } } " +
+          "  ], " +
+          "  as: 'comments' " +
           "} }"
       )
     );
@@ -233,6 +291,10 @@ public class CrudReviewService {
         .as("createdAt")
         .and("updated_at")
         .as("updatedAt")
+        .and("review_likes")
+        .as("reviewLikes")
+        .and("comments")
+        .as("comments")
     );
 
     Aggregation aggregation = Aggregation.newAggregation(operations);
@@ -245,7 +307,7 @@ public class CrudReviewService {
     if (result == null || result.isEmpty()) {
       throw new NoSuchElementException("Review no encontrada");
     }
-    return documentToDto(result);
+    return documentToDto(result, userId);
   }
 
   public String createReview(CreateReviewDto dto, String userId) {
@@ -264,7 +326,7 @@ public class CrudReviewService {
     return review.getId();
   }
 
-  public ReviewDto updateReview(String id, UpdateReviewDto dto) {
+  public ReviewDto updateReview(String id, UpdateReviewDto dto, String userId) {
     Review review = reviewRepository
       .findById(id)
       .orElseThrow(() -> new NoSuchElementException("Review no encontrada"));
@@ -275,21 +337,26 @@ public class CrudReviewService {
 
     reviewRepository.save(review);
 
-    return getReviewById(id);
+    return getReviewById(id, userId);
   }
 
-  public String deleteReview(String id) {
+  public String deleteReview(String id, String userId) {
     Review review = reviewRepository
       .findById(id)
       .orElseThrow(() -> new NoSuchElementException("Review no encontrada"));
 
+    if (!review.getUserId().equals(userId)) {
+      throw new SecurityException("No tienes permiso para eliminar esta reseña");
+    }
+
     reviewRepository.deleteById(review.getId());
     commentService.deleteAllCommentsByReviewId(id);
+    reviewLikeService.removeAllLikeReview(id);
 
     return review.getId();
   }
 
-  private ReviewDto documentToDto(Document doc) {
+  private ReviewDto documentToDto(Document doc, String userId) {
     ReviewDto dto = new ReviewDto();
 
     Object idObj = doc.get("id");
@@ -307,6 +374,26 @@ public class CrudReviewService {
     dto.setUserId(doc.getString("userId"));
     dto.setCreatedAt(doc.getDate("createdAt"));
     dto.setUpdatedAt(doc.getDate("updatedAt"));
+
+    List<Document> likesDocs = doc.getList("reviewLikes", Document.class);
+    if (likesDocs != null) {
+      dto.setLikes(likesDocs.size());
+      boolean isLiked = likesDocs
+        .stream()
+        .anyMatch(like -> userId != null && userId.equals(like.getString("user_id")));
+      dto.setLiked(isLiked);
+    } else {
+      dto.setLikes(0);
+      dto.setLiked(false);
+    }
+
+    List<Document> commentsDocs = doc.getList("comments", Document.class);
+    if (commentsDocs != null) {
+      dto.setComments(commentsDocs.size());
+    } else {
+      dto.setComments(0);
+    }
+
     return dto;
   }
 }

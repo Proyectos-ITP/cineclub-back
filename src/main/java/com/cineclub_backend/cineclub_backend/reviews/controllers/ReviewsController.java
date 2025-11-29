@@ -4,6 +4,7 @@ import com.cineclub_backend.cineclub_backend.reviews.dots.CreateReviewDto;
 import com.cineclub_backend.cineclub_backend.reviews.dots.FindReviewPagedDto;
 import com.cineclub_backend.cineclub_backend.reviews.dots.ReviewDto;
 import com.cineclub_backend.cineclub_backend.reviews.dots.UpdateReviewDto;
+import com.cineclub_backend.cineclub_backend.reviews.services.CrudReviewLikeService;
 import com.cineclub_backend.cineclub_backend.reviews.services.CrudReviewService;
 import com.cineclub_backend.cineclub_backend.shared.dtos.ApiResponse;
 import com.cineclub_backend.cineclub_backend.shared.dtos.PagedResponseDto;
@@ -30,27 +31,37 @@ import org.springframework.web.bind.annotation.RestController;
 public class ReviewsController {
 
   private final CrudReviewService crudReviewService;
+  private final CrudReviewLikeService crudReviewLikeService;
 
-  public ReviewsController(CrudReviewService crudReviewService) {
+  public ReviewsController(
+    CrudReviewService crudReviewService,
+    CrudReviewLikeService crudReviewLikeService
+  ) {
     this.crudReviewService = crudReviewService;
+    this.crudReviewLikeService = crudReviewLikeService;
   }
 
   @GetMapping
   @Operation(summary = "Listar reseñas", description = "Obtiene la lista de reseñas")
   public PagedResponseDto<ReviewDto> getPagedReviews(
-    @ParameterObject FindReviewPagedDto findReviewPagedDto
+    @ParameterObject FindReviewPagedDto findReviewPagedDto,
+    @AuthenticationPrincipal String userId
   ) {
     Page<ReviewDto> reviews = crudReviewService.getPagedReviews(
       findReviewPagedDto,
-      findReviewPagedDto.getUserId()
+      findReviewPagedDto.getUserId(),
+      userId
     );
     return new PagedResponseDto<>(reviews);
   }
 
   @GetMapping("/{id}")
   @Operation(summary = "Obtener reseña por ID", description = "Obtiene una reseña por su ID")
-  public ResponseEntity<ApiResponse<ReviewDto>> getReviewById(@PathVariable String id) {
-    ReviewDto reviewDto = crudReviewService.getReviewById(id);
+  public ResponseEntity<ApiResponse<ReviewDto>> getReviewById(
+    @PathVariable String id,
+    @AuthenticationPrincipal String userId
+  ) {
+    ReviewDto reviewDto = crudReviewService.getReviewById(id, userId);
     return ResponseEntity.ok(ApiResponse.success(reviewDto));
   }
 
@@ -63,7 +74,7 @@ public class ReviewsController {
     @ParameterObject FindReviewPagedDto findReviewPagedDto,
     @AuthenticationPrincipal String userId
   ) {
-    Page<ReviewDto> reviews = crudReviewService.getPagedReviews(findReviewPagedDto, userId);
+    Page<ReviewDto> reviews = crudReviewService.getPagedReviews(findReviewPagedDto, userId, userId);
     return new PagedResponseDto<>(reviews);
   }
 
@@ -83,9 +94,10 @@ public class ReviewsController {
   @Operation(summary = "Actualizar reseña", description = "Actualiza una reseña existente")
   public ResponseEntity<ApiResponse<ReviewDto>> updateReview(
     @PathVariable String id,
-    @RequestBody UpdateReviewDto updateReviewDto
+    @RequestBody UpdateReviewDto updateReviewDto,
+    @AuthenticationPrincipal String userId
   ) {
-    ReviewDto updatedReview = crudReviewService.updateReview(id, updateReviewDto);
+    ReviewDto updatedReview = crudReviewService.updateReview(id, updateReviewDto, userId);
     return ResponseEntity.ok(
       ApiResponse.success("La reseña se actualizó correctamente.", updatedReview)
     );
@@ -93,8 +105,31 @@ public class ReviewsController {
 
   @DeleteMapping("/{id}")
   @Operation(summary = "Eliminar reseña", description = "Elimina una reseña existente")
-  public ResponseEntity<ApiResponse<String>> deleteReview(@PathVariable String id) {
-    String rowId = crudReviewService.deleteReview(id);
+  public ResponseEntity<ApiResponse<String>> deleteReview(
+    @PathVariable String id,
+    @AuthenticationPrincipal String userId
+  ) {
+    String rowId = crudReviewService.deleteReview(id, userId);
     return ResponseEntity.ok(ApiResponse.success("La reseña se eliminó correctamente.", rowId));
+  }
+
+  @PostMapping("/like/{id}")
+  @Operation(summary = "Dar like a una reseña", description = "Da like a una reseña")
+  public ResponseEntity<ApiResponse<String>> likeReview(
+    @PathVariable String id,
+    @AuthenticationPrincipal String userId
+  ) {
+    String rowId = crudReviewLikeService.createLikeReview(id, userId);
+    return ResponseEntity.ok(ApiResponse.success("", rowId));
+  }
+
+  @DeleteMapping("/like/{id}")
+  @Operation(summary = "Eliminar like de una reseña", description = "Elimina el like de una reseña")
+  public ResponseEntity<ApiResponse<String>> dislikeReview(
+    @PathVariable String id,
+    @AuthenticationPrincipal String userId
+  ) {
+    String rowId = crudReviewLikeService.removeLikeReview(id, userId);
+    return ResponseEntity.ok(ApiResponse.success("", rowId));
   }
 }

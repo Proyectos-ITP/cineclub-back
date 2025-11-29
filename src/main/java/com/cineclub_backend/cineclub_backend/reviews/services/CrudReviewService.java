@@ -30,15 +30,18 @@ public class CrudReviewService {
   private final MongoTemplate mongoTemplate;
   private final ReviewRepository reviewRepository;
   private final CrudMovieService movieService;
+  private final CrudCommentService commentService;
 
   public CrudReviewService(
     MongoTemplate mongoTemplate,
     ReviewRepository reviewRepository,
-    CrudMovieService movieService
+    CrudMovieService movieService,
+    CrudCommentService commentService
   ) {
     this.mongoTemplate = mongoTemplate;
     this.reviewRepository = reviewRepository;
     this.movieService = movieService;
+    this.commentService = commentService;
   }
 
   public Page<ReviewDto> getPagedReviews(FindReviewPagedDto params, String userId) {
@@ -182,6 +185,10 @@ public class CrudReviewService {
     }
   }
 
+  public Review findById(String id) {
+    return reviewRepository.findById(id).orElse(null);
+  }
+
   public ReviewDto getReviewById(String id) {
     List<AggregationOperation> operations = new ArrayList<>();
     operations.add(Aggregation.match(Criteria.where("_id").is(id)));
@@ -277,6 +284,7 @@ public class CrudReviewService {
       .orElseThrow(() -> new NoSuchElementException("Review no encontrada"));
 
     reviewRepository.deleteById(review.getId());
+    commentService.deleteAllCommentsByReviewId(id);
 
     return review.getId();
   }

@@ -19,7 +19,7 @@ public class CollectionRequest {
   @Field("receiver_id")
   private String receiverId;
 
-  private String status; // PENDING, ACCEPTED
+  private String status;
 
   @Field("created_at")
   private LocalDateTime createdAt;

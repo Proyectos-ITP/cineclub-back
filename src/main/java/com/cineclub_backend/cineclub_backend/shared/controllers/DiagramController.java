@@ -94,15 +94,12 @@ public class DiagramController {
       e.printStackTrace();
     }
 
-    // Usar motor de línea de comandos (requiere graphviz instalado en el sistema)
     Graphviz.useEngine(new GraphvizCmdLineEngine());
 
-    // Crear grafo sin dirección forzada para distribución más natural
     MutableGraph graph = mutGraph("API")
       .setDirected(true)
-      // No usar Rank.dir para permitir distribución en todas direcciones
       .graphAttrs()
-      .add("layout", "neato") // neato distribuye en círculo/radial
+      .add("layout", "neato")
       .graphAttrs()
       .add("overlap", "false")
       .graphAttrs()
@@ -112,7 +109,7 @@ public class DiagramController {
       .graphAttrs()
       .add("pad", "1.0")
       .graphAttrs()
-      .add("sep", "+25") // Separación entre nodos
+      .add("sep", "+25")
       .nodeAttrs()
       .add("fontsize", "12")
       .nodeAttrs()
@@ -130,7 +127,6 @@ public class DiagramController {
 
     System.out.println("Paths found: " + pathMethods.size());
 
-    // === Crear nodo central "API Gateway" ===
     MutableNode apiGateway = mutNode("API_Gateway")
       .add(Style.FILLED)
       .add(Color.rgb("#2C3E50").fill())
@@ -141,11 +137,10 @@ public class DiagramController {
       .add("fontsize", "16")
       .add("height", "1.5")
       .add("width", "3.0")
-      .add("pin", "true") // Fijar en el centro
-      .add("pos", "0,0!"); // Posición central
+      .add("pin", "true")
+      .add("pos", "0,0!");
     graph.add(apiGateway);
 
-    // === Crear nodos de controllers ===
     for (String tag : pathsByTag.keySet()) {
       List<String> pathsExcluded = List.of("health-controller", "scalar-controller");
 
@@ -179,7 +174,6 @@ public class DiagramController {
       );
     }
 
-    // Agregar controllers y conectar al gateway
     controllerNodes
       .values()
       .forEach(c -> {
@@ -187,7 +181,6 @@ public class DiagramController {
         graph.add(apiGateway.addLink(to(c).with(Color.rgb("#4A90E2")).with("penwidth", "2.5")));
       });
 
-    // === Security schemes ===
     for (String secName : securitySchemes) {
       MutableNode secNode = mutNode(secName)
         .add(Style.FILLED)
@@ -201,7 +194,6 @@ public class DiagramController {
         .add("width", "2.5");
 
       graph.add(secNode);
-      // Conectar security al gateway
       graph.add(
         secNode.addLink(
           to(apiGateway).with(Color.rgb("#E74C3C"), Style.DASHED).with("penwidth", "2.0")
@@ -209,7 +201,6 @@ public class DiagramController {
       );
     }
 
-    // === MongoDB ===
     MutableNode mongo = mutNode("MongoDB")
       .add(Style.FILLED)
       .add(Color.rgb("#4DB33D").fill())
@@ -222,7 +213,6 @@ public class DiagramController {
       .add("width", "2.5");
     graph.add(mongo);
 
-    // === Redis ===
     MutableNode redis = mutNode("Redis")
       .add(Style.FILLED)
       .add(Color.rgb("#DC382D").fill())
@@ -235,7 +225,6 @@ public class DiagramController {
       .add("width", "2.5");
     graph.add(redis);
 
-    // Vincular Controllers → DB
     controllerNodes
       .values()
       .forEach(c -> {
@@ -247,7 +236,6 @@ public class DiagramController {
         );
       });
 
-    // Renderizar con proporción más
     String svg = Graphviz.fromGraph(graph).width(1200).render(Format.SVG).toString();
 
     return ResponseEntity.ok(svg);

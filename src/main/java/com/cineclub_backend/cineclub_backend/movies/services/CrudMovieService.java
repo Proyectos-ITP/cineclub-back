@@ -7,6 +7,7 @@ import com.cineclub_backend.cineclub_backend.movies.dtos.UpdateMovieDto;
 import com.cineclub_backend.cineclub_backend.movies.models.Movie;
 import com.cineclub_backend.cineclub_backend.movies.repositories.MovieRepository;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.NoSuchElementException;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +16,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
@@ -121,6 +123,7 @@ public class CrudMovieService {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private MovieDto convertDocumentToMovieDto(Document doc) {
     MovieDto dto = new MovieDto();
 
@@ -136,7 +139,12 @@ public class CrudMovieService {
 
     dto.setTitle(doc.getString("title"));
     dto.setOverview(doc.getString("overview"));
-    dto.setGenres(doc.getString("genres"));
+    Object genresObj = doc.get("genres");
+    if (genresObj instanceof List) {
+      dto.setGenres(String.join(", ", (List<String>) genresObj));
+    } else if (genresObj instanceof String) {
+      dto.setGenres((String) genresObj);
+    }
 
     Object releaseDateObj = doc.get("releaseDate");
     if (releaseDateObj instanceof java.util.Date) {
@@ -152,6 +160,27 @@ public class CrudMovieService {
 
     dto.setOriginalLanguage(doc.getString("originalLanguage"));
     dto.setDirector(doc.getString("director"));
+
+    if (doc.containsKey("score")) {
+      Object scoreObj = doc.get("score");
+      if (scoreObj instanceof Number) {
+        dto.setScore(((Number) scoreObj).doubleValue());
+      }
+    }
+
+    if (doc.containsKey("upVotes")) {
+      Object upVotesObj = doc.get("upVotes");
+      if (upVotesObj instanceof Number) {
+        dto.setUpVotes(((Number) upVotesObj).intValue());
+      }
+    }
+
+    if (doc.containsKey("downVotes")) {
+      Object downVotesObj = doc.get("downVotes");
+      if (downVotesObj instanceof Number) {
+        dto.setDownVotes(((Number) downVotesObj).intValue());
+      }
+    }
     return dto;
   }
 
@@ -254,5 +283,71 @@ public class CrudMovieService {
     movie.setRuntime(dto.getRuntime());
     movie.setOriginalLanguage(dto.getOriginalLanguage());
     return movie;
+  }
+
+  public List<MovieDto> getTopMovies(int limit) {
+    Aggregation aggregation = Aggregation.newAggregation(
+      Aggregation.addFields()
+        .addField("score")
+        .withValue(
+          new Document(
+            "$subtract",
+            Arrays.asList(
+              new Document("$ifNull", Arrays.asList("$up_votes", 0)),
+              new Document("$ifNull", Arrays.asList("$down_votes", 0))
+            )
+          )
+        )
+        .build(),
+      Aggregation.sort(Direction.DESC, "score"),
+      Aggregation.limit(limit),
+      Aggregation.lookup("directors", "movie_id", "movie_id", "director"),
+      Aggregation.unwind("director", true),
+      Aggregation.project()
+        .and("_id")
+        .as("id")
+        .and("title")
+        .as("title")
+        .and("overview")
+        .as("overview")
+        .and("genres")
+        .as("genres")
+        .and("release_date")
+        .as("releaseDate")
+        .and("poster_path")
+        .as("posterPath")
+        .and("original_language")
+        .as("originalLanguage")
+        .and("runtime")
+        .as("runtime")
+        .and("director")
+        .as("director")
+        .and("score")
+        .as("score")
+        .and("up_votes")
+        .as("upVotes")
+        .and("down_votes")
+        .as("downVotes")
+    );
+
+    AggregationResults<Document> results = mongoTemplate.aggregate(
+      aggregation,
+      "movies",
+      Document.class
+    );
+
+    return results
+      .getMappedResults()
+      .stream()
+      .map(doc -> {
+        MovieDto dto = convertDocumentToMovieDto(doc);
+
+        Document directorDoc = doc.get("director", Document.class);
+        if (directorDoc != null) {
+          dto.setDirector(directorDoc.getString("director"));
+        }
+        return dto;
+      })
+      .toList();
   }
 }

@@ -55,7 +55,16 @@ public class CrudMovieService {
         .and(Aggregation.count().as("total"))
         .as("metadata")
         .and(
-          Aggregation.sort(pageable.getSort()),
+          Aggregation.sort(
+            pageable
+              .getSort()
+              .and(
+                org.springframework.data.domain.Sort.by(
+                  org.springframework.data.domain.Sort.Direction.ASC,
+                  "_id"
+                )
+              )
+          ),
           Aggregation.skip((long) pageable.getPageNumber() * pageable.getPageSize()),
           Aggregation.limit(pageable.getPageSize()),
           Aggregation.stage(

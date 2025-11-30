@@ -201,38 +201,23 @@ public class DiagramController {
       );
     }
 
-    MutableNode mongo = mutNode("MongoDB")
+    MutableNode dataBases = mutNode("DataBases")
       .add(Style.FILLED)
       .add(Color.rgb("#4DB33D").fill())
       .add(Color.rgb("#3E9A2D"))
       .add(Shape.CYLINDER)
-      .add(Label.of("🍃 MongoDB"))
+      .add(Label.of("🍃 DataBases"))
       .add("fontcolor", "white")
       .add("fontsize", "14")
       .add("height", "1.0")
       .add("width", "2.5");
-    graph.add(mongo);
-
-    MutableNode redis = mutNode("Redis")
-      .add(Style.FILLED)
-      .add(Color.rgb("#DC382D").fill())
-      .add(Color.rgb("#A92D23"))
-      .add(Shape.CYLINDER)
-      .add(Label.of("⚡ Redis"))
-      .add("fontcolor", "white")
-      .add("fontsize", "14")
-      .add("height", "1.0")
-      .add("width", "2.5");
-    graph.add(redis);
+    graph.add(dataBases);
 
     controllerNodes
       .values()
       .forEach(c -> {
         graph.add(
-          c.addLink(to(mongo).with(Color.rgb("#4DB33D"), Style.DASHED).with("penwidth", "1.5"))
-        );
-        graph.add(
-          c.addLink(to(redis).with(Color.rgb("#DC382D"), Style.DASHED).with("penwidth", "1.5"))
+          c.addLink(to(dataBases).with(Color.rgb("#781BCF"), Style.DASHED).with("penwidth", "1.5"))
         );
       });
 

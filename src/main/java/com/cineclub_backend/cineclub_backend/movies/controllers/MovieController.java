@@ -4,16 +4,22 @@ import com.cineclub_backend.cineclub_backend.movies.dtos.CreateMovieDto;
 import com.cineclub_backend.cineclub_backend.movies.dtos.FindMovieDto;
 import com.cineclub_backend.cineclub_backend.movies.dtos.MovieDto;
 import com.cineclub_backend.cineclub_backend.movies.dtos.UpdateMovieDto;
+import com.cineclub_backend.cineclub_backend.movies.dtos.VoteMovieDto;
 import com.cineclub_backend.cineclub_backend.movies.services.CrudMovieService;
+import com.cineclub_backend.cineclub_backend.movies.services.CrudMovieVoteService;
 import com.cineclub_backend.cineclub_backend.shared.dtos.ApiResponse;
 import com.cineclub_backend.cineclub_backend.shared.dtos.PagedResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import java.util.List;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -21,6 +27,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -29,9 +36,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class MovieController {
 
   private final CrudMovieService crudMovieService;
+  private final CrudMovieVoteService crudMovieVoteService;
 
-  public MovieController(CrudMovieService crudMovieService) {
+  public MovieController(
+    CrudMovieService crudMovieService,
+    CrudMovieVoteService crudMovieVoteService
+  ) {
     this.crudMovieService = crudMovieService;
+    this.crudMovieVoteService = crudMovieVoteService;
   }
 
   @GetMapping
@@ -88,5 +100,31 @@ public class MovieController {
   public ResponseEntity<ApiResponse<Void>> deleteMovie(@PathVariable String id) {
     crudMovieService.deleteMovie(id);
     return ResponseEntity.ok(ApiResponse.success("Pelicula eliminada exitosamente", null));
+  }
+
+  @PostMapping("/{id}/vote")
+  @Operation(
+    summary = "Votar película",
+    description = "Permite votar una película (UP/DOWN). Si ya votó lo mismo, se quita el voto."
+  )
+  public ResponseEntity<ApiResponse<Void>> voteMovie(
+    @PathVariable String id,
+    @Valid @RequestBody VoteMovieDto voteDto,
+    @AuthenticationPrincipal String userId
+  ) {
+    crudMovieVoteService.voteMovie(id, userId, voteDto.getType());
+    return ResponseEntity.ok(ApiResponse.success("Voto registrado exitosamente", null));
+  }
+
+  @GetMapping("/top")
+  @Operation(
+    summary = "Top películas",
+    description = "Obtiene el top de películas basado en votos (upVotes - downVotes)"
+  )
+  public ResponseEntity<ApiResponse<List<MovieDto>>> getTopMovies(
+    @RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit
+  ) {
+    List<MovieDto> movies = crudMovieService.getTopMovies(limit);
+    return ResponseEntity.ok(ApiResponse.success(movies));
   }
 }

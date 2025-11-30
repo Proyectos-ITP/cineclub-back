@@ -17,6 +17,11 @@ public class MovieDto {
   private int runtime;
   private String originalLanguage;
 
+  private int upVotes;
+  private int downVotes;
+
+  private double score;
+
   @JsonInclude(JsonInclude.Include.NON_NULL)
   private String director;
 }

@@ -30,4 +30,10 @@ public class Movie {
 
   @Field("original_language")
   private String originalLanguage;
+
+  @Field("up_votes")
+  private int upVotes;
+
+  @Field("down_votes")
+  private int downVotes;
 }

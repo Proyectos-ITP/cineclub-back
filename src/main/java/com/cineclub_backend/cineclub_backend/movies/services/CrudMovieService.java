@@ -44,8 +44,6 @@ public class CrudMovieService {
   }
 
   public Page<MovieDto> getAllMovies(String title, Pageable pageable) {
-    System.out.println(pageable.getPageNumber() * pageable.getPageSize());
-    System.out.println(pageable.getPageSize());
     try {
       List<AggregationOperation> operations = new ArrayList<>();
 

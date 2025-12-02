@@ -10,6 +10,7 @@ import com.cineclub_backend.cineclub_backend.notifications.models.NotificationTy
 import com.cineclub_backend.cineclub_backend.notifications.services.NotificationService;
 import com.cineclub_backend.cineclub_backend.shared.services.WebSocketNotificationService;
 import com.cineclub_backend.cineclub_backend.shared.templates.CollectionRequestTemplate;
+import com.cineclub_backend.cineclub_backend.social.dtos.FriendRequestNotificationDto.SenderInfo;
 import com.cineclub_backend.cineclub_backend.users.models.User;
 import com.cineclub_backend.cineclub_backend.users.repositories.UserRepository;
 import java.util.ArrayList;
@@ -30,6 +31,7 @@ public class CollectionRequestService {
   private final JobQueueService jobQueueService;
   private final WebSocketNotificationService webSocketNotificationService;
   private final NotificationService persistentNotificationService;
+  private final MoviesNotificationsService moviesNotificationsService;
 
   public CollectionRequestService(
     CollectionRequestRepository collectionRequestRepository,
@@ -37,7 +39,8 @@ public class CollectionRequestService {
     UserRepository userRepository,
     JobQueueService jobQueueService,
     WebSocketNotificationService webSocketNotificationService,
-    NotificationService persistentNotificationService
+    NotificationService persistentNotificationService,
+    MoviesNotificationsService moviesNotificationsService
   ) {
     this.collectionRequestRepository = collectionRequestRepository;
     this.collectionRepository = collectionRepository;
@@ -45,6 +48,7 @@ public class CollectionRequestService {
     this.jobQueueService = jobQueueService;
     this.webSocketNotificationService = webSocketNotificationService;
     this.persistentNotificationService = persistentNotificationService;
+    this.moviesNotificationsService = moviesNotificationsService;
   }
 
   @Transactional
@@ -86,12 +90,34 @@ public class CollectionRequestService {
     CollectionRequestResponseDto notificationDto = toDto(request, sender);
     webSocketNotificationService.sendCollectionRequestNotification(receiverId, notificationDto);
 
+    SenderInfo senderInfo = new SenderInfo();
+    senderInfo.setFullName(sender.getFullName());
+    senderInfo.setId(sender.getId());
+
+    sendNotification(
+      receiverId,
+      senderId,
+      NotificationType.COLLECTION_REQUEST,
+      request.getId(),
+      senderInfo
+    );
+
     persistentNotificationService.createNotification(
       receiverId,
       senderId,
       NotificationType.COLLECTION_REQUEST,
       request.getId()
     );
+  }
+
+  private void sendNotification(
+    String receiverId,
+    String senderId,
+    NotificationType type,
+    String entityId,
+    SenderInfo senderInfo
+  ) {
+    moviesNotificationsService.sendNotification(receiverId, senderId, type, entityId, senderInfo);
   }
 
   public List<CollectionRequestResponseDto> getPendingRequests(String userId) {
@@ -113,6 +139,8 @@ public class CollectionRequestService {
     CollectionRequest request = collectionRequestRepository
       .findById(requestId)
       .orElseThrow(() -> new RuntimeException("Solicitud no encontrada"));
+
+    User sender = userRepository.findById(request.getSenderId()).orElse(null);
 
     if (!request.getReceiverId().equals(userId)) {
       throw new RuntimeException("No tienes permiso para aceptar esta solicitud");
@@ -154,9 +182,21 @@ public class CollectionRequestService {
     request.setStatus("ACCEPTED");
     collectionRequestRepository.save(request);
 
-    persistentNotificationService.createNotification(
-      request.getSenderId(),
+    SenderInfo senderInfo = new SenderInfo();
+    senderInfo.setFullName(sender.getFullName());
+    senderInfo.setId(sender.getId());
+
+    sendNotification(
       userId,
+      request.getSenderId(),
+      NotificationType.COLLECTION_ACCEPTED,
+      request.getId(),
+      senderInfo
+    );
+
+    persistentNotificationService.createNotification(
+      userId,
+      request.getSenderId(),
       NotificationType.COLLECTION_ACCEPTED,
       request.getId()
     );

@@ -6,6 +6,7 @@ import com.cineclub_backend.cineclub_backend.notifications.services.Notification
 import com.cineclub_backend.cineclub_backend.shared.services.WebSocketNotificationService;
 import com.cineclub_backend.cineclub_backend.shared.templates.FriendsRequestTemplate;
 import com.cineclub_backend.cineclub_backend.social.dtos.FriendRequestNotificationDto;
+import com.cineclub_backend.cineclub_backend.social.dtos.FriendRequestNotificationDto.SenderInfo;
 import com.cineclub_backend.cineclub_backend.social.models.Friend;
 import com.cineclub_backend.cineclub_backend.social.models.FriendRequest;
 import com.cineclub_backend.cineclub_backend.social.repositories.FriendRequestRepository;
@@ -32,6 +33,7 @@ public class CrudFriendsRequestsService {
   private final WebSocketNotificationService notificationService;
   private final JobQueueService jobQueueService;
   private final NotificationService persistentNotificationService;
+  private final FriendsNotificationsService friendsNotificationsService;
 
   public FriendRequest sendFriendRequest(String userId, String receiverId) {
     Optional<FriendRequest> existingRequest = friendRequestRepository.findBySenderIdAndReceiverId(
@@ -88,19 +90,18 @@ public class CrudFriendsRequestsService {
 
   private void sendFriendRequestNotification(FriendRequest friendRequest) {
     User receiver = userRepository.findById(friendRequest.getReceiverId()).orElse(null);
+    User sender = userRepository.findById(friendRequest.getSenderId()).orElse(null);
+
+    SenderInfo senderInfo = new SenderInfo();
+    senderInfo.setFullName(sender.getFullName());
+    senderInfo.setId(sender.getId());
 
     if (receiver != null) {
       FriendRequestNotificationDto notification = FriendRequestNotificationDto.builder()
         .id(friendRequest.getId())
         .senderId(friendRequest.getSenderId())
         .receiverId(friendRequest.getReceiverId())
-        .sender(
-          FriendRequestNotificationDto.SenderInfo.builder()
-            .id(receiver.getId())
-            .fullName(receiver.getFullName())
-            .email(receiver.getEmail())
-            .build()
-        )
+        .sender(senderInfo)
         .createdAt(friendRequest.getCreatedAt())
         .status(friendRequest.getStatus())
         .build();
@@ -108,6 +109,14 @@ public class CrudFriendsRequestsService {
       notificationService.sendFriendRequestNotification(
         friendRequest.getReceiverId(),
         notification
+      );
+
+      friendsNotificationsService.sendNotification(
+        friendRequest.getReceiverId(),
+        friendRequest.getSenderId(),
+        NotificationType.FRIEND_REQUEST,
+        friendRequest.getId(),
+        senderInfo
       );
     }
   }
@@ -149,6 +158,16 @@ public class CrudFriendsRequestsService {
       NotificationType.FRIEND_ACCEPTED,
       updatedRequest.getId()
     );
+
+    removeFriendRequestNotification(senderId, userId);
+  }
+
+  private void removeFriendRequestNotification(String senderId, String receiverId) {
+    persistentNotificationService.removeNotification(
+      senderId,
+      receiverId,
+      NotificationType.FRIEND_REQUEST
+    );
   }
 
   private void sendFriendRequestAcceptedEmailNotification(FriendRequest friendRequest) {
@@ -182,25 +201,17 @@ public class CrudFriendsRequestsService {
   ) {
     User acceptedByUser = userRepository.findById(acceptedById).orElse(null);
 
-    if (acceptedByUser != null) {
-      FriendRequestNotificationDto notification = FriendRequestNotificationDto.builder()
-        .id(friendRequest.getId())
-        .senderId(friendRequest.getSenderId())
-        .receiverId(friendRequest.getReceiverId())
-        .sender(
-          FriendRequestNotificationDto.SenderInfo.builder()
-            .id(acceptedByUser.getId())
-            .fullName(acceptedByUser.getFullName())
-            .email(acceptedByUser.getEmail())
-            .build()
-        )
-        .createdAt(friendRequest.getCreatedAt())
-        .status(friendRequest.getStatus())
-        .build();
+    SenderInfo senderInfo = new SenderInfo();
+    senderInfo.setFullName(acceptedByUser.getFullName());
+    senderInfo.setId(acceptedByUser.getId());
 
-      notificationService.sendFriendRequestAcceptedNotification(
+    if (acceptedByUser != null) {
+      friendsNotificationsService.sendNotification(
         friendRequest.getSenderId(),
-        notification
+        friendRequest.getReceiverId(),
+        NotificationType.FRIEND_ACCEPTED,
+        friendRequest.getId(),
+        senderInfo
       );
     }
   }
@@ -217,6 +228,7 @@ public class CrudFriendsRequestsService {
     friendRequestRepository.delete(friendRequest);
 
     sendFriendRequestRejectedEmailNotification(friendRequest);
+    removeFriendRequestNotification(senderId, userId);
   }
 
   private void sendFriendRequestRejectedEmailNotification(FriendRequest friendRequest) {

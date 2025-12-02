@@ -11,6 +11,7 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
     "com.cineclub_backend.cineclub_backend.shared.repositories",
     "com.cineclub_backend.cineclub_backend.social.repositories",
     "com.cineclub_backend.cineclub_backend.reviews.repositories",
+    "com.cineclub_backend.cineclub_backend.notifications.repositories",
   }
 )
 public class MongoConfig {}

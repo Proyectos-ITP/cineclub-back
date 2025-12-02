@@ -125,8 +125,6 @@ public class DiagramController {
 
     Map<String, MutableNode> controllerNodes = new HashMap<>();
 
-    System.out.println("Paths found: " + pathMethods.size());
-
     MutableNode apiGateway = mutNode("API_Gateway")
       .add(Style.FILLED)
       .add(Color.rgb("#2C3E50").fill())

@@ -32,7 +32,6 @@ public class SerializeHelper {
   }
 
   public static <T> T toObject(Object record, Class<T> clazz) {
-    System.out.println(record);
     return mapper.convertValue(record instanceof Map ? record : Map.of(), clazz);
   }
 

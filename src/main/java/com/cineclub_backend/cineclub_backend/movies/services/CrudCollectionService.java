@@ -152,6 +152,9 @@ public class CrudCollectionService {
           }
 
           movieInfo.setTitle(movieDoc.getString("title"));
+          movieInfo.setPosterPath(movieDoc.getString("poster_path"));
+          movieInfo.setOverview(movieDoc.getString("overview"));
+          movieInfo.setReleaseDate(movieDoc.getDate("release_date"));
           movieInfoList.add(movieInfo);
         }
       }

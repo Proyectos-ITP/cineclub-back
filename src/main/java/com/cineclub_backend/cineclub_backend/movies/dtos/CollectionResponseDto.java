@@ -1,6 +1,7 @@
 package com.cineclub_backend.cineclub_backend.movies.dtos;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import java.util.Date;
 import java.util.List;
 import lombok.Data;
 
@@ -19,5 +20,8 @@ public class CollectionResponseDto {
 
     private String id;
     private String title;
+    private String posterPath;
+    private String overview;
+    private Date releaseDate;
   }
 }

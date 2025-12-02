@@ -1,6 +1,8 @@
 package com.cineclub_backend.cineclub_backend.social.services;
 
 import com.cineclub_backend.cineclub_backend.jobs.services.JobQueueService;
+import com.cineclub_backend.cineclub_backend.notifications.models.NotificationType;
+import com.cineclub_backend.cineclub_backend.notifications.services.NotificationService;
 import com.cineclub_backend.cineclub_backend.shared.services.WebSocketNotificationService;
 import com.cineclub_backend.cineclub_backend.shared.templates.FriendsRequestTemplate;
 import com.cineclub_backend.cineclub_backend.social.dtos.FriendRequestNotificationDto;
@@ -29,6 +31,7 @@ public class CrudFriendsRequestsService {
   private final UserRepository userRepository;
   private final WebSocketNotificationService notificationService;
   private final JobQueueService jobQueueService;
+  private final NotificationService persistentNotificationService;
 
   public FriendRequest sendFriendRequest(String userId, String receiverId) {
     Optional<FriendRequest> existingRequest = friendRequestRepository.findBySenderIdAndReceiverId(
@@ -48,11 +51,15 @@ public class CrudFriendsRequestsService {
 
     FriendRequest savedRequest = friendRequestRepository.save(friendRequest);
 
-    System.out.println(savedRequest.getSenderId());
-    System.out.println(savedRequest.getReceiverId());
-
     sendFriendRequestEmailNotification(savedRequest);
     sendFriendRequestNotification(savedRequest);
+
+    persistentNotificationService.createNotification(
+      receiverId,
+      userId,
+      NotificationType.FRIEND_REQUEST,
+      savedRequest.getId()
+    );
 
     return savedRequest;
   }
@@ -81,10 +88,6 @@ public class CrudFriendsRequestsService {
 
   private void sendFriendRequestNotification(FriendRequest friendRequest) {
     User receiver = userRepository.findById(friendRequest.getReceiverId()).orElse(null);
-
-    System.out.println(receiver.getFullName());
-    System.out.println(receiver.getEmail());
-    System.out.println(receiver.getId());
 
     if (receiver != null) {
       FriendRequestNotificationDto notification = FriendRequestNotificationDto.builder()
@@ -139,6 +142,13 @@ public class CrudFriendsRequestsService {
 
     sendFriendRequestAcceptedEmailNotification(updatedRequest);
     sendFriendRequestAcceptedNotification(updatedRequest, userId);
+
+    persistentNotificationService.createNotification(
+      senderId,
+      userId,
+      NotificationType.FRIEND_ACCEPTED,
+      updatedRequest.getId()
+    );
   }
 
   private void sendFriendRequestAcceptedEmailNotification(FriendRequest friendRequest) {

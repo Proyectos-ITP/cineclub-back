@@ -6,6 +6,8 @@ import com.cineclub_backend.cineclub_backend.movies.models.Collection;
 import com.cineclub_backend.cineclub_backend.movies.models.CollectionRequest;
 import com.cineclub_backend.cineclub_backend.movies.repositories.CollectionRepository;
 import com.cineclub_backend.cineclub_backend.movies.repositories.CollectionRequestRepository;
+import com.cineclub_backend.cineclub_backend.notifications.models.NotificationType;
+import com.cineclub_backend.cineclub_backend.notifications.services.NotificationService;
 import com.cineclub_backend.cineclub_backend.shared.services.WebSocketNotificationService;
 import com.cineclub_backend.cineclub_backend.shared.templates.CollectionRequestTemplate;
 import com.cineclub_backend.cineclub_backend.users.models.User;
@@ -27,19 +29,22 @@ public class CollectionRequestService {
   private final UserRepository userRepository;
   private final JobQueueService jobQueueService;
   private final WebSocketNotificationService webSocketNotificationService;
+  private final NotificationService persistentNotificationService;
 
   public CollectionRequestService(
     CollectionRequestRepository collectionRequestRepository,
     CollectionRepository collectionRepository,
     UserRepository userRepository,
     JobQueueService jobQueueService,
-    WebSocketNotificationService webSocketNotificationService
+    WebSocketNotificationService webSocketNotificationService,
+    NotificationService persistentNotificationService
   ) {
     this.collectionRequestRepository = collectionRequestRepository;
     this.collectionRepository = collectionRepository;
     this.userRepository = userRepository;
     this.jobQueueService = jobQueueService;
     this.webSocketNotificationService = webSocketNotificationService;
+    this.persistentNotificationService = persistentNotificationService;
   }
 
   @Transactional
@@ -80,6 +85,13 @@ public class CollectionRequestService {
 
     CollectionRequestResponseDto notificationDto = toDto(request, sender);
     webSocketNotificationService.sendCollectionRequestNotification(receiverId, notificationDto);
+
+    persistentNotificationService.createNotification(
+      receiverId,
+      senderId,
+      NotificationType.COLLECTION_REQUEST,
+      request.getId()
+    );
   }
 
   public List<CollectionRequestResponseDto> getPendingRequests(String userId) {
@@ -141,6 +153,13 @@ public class CollectionRequestService {
 
     request.setStatus("ACCEPTED");
     collectionRequestRepository.save(request);
+
+    persistentNotificationService.createNotification(
+      request.getSenderId(),
+      userId,
+      NotificationType.COLLECTION_ACCEPTED,
+      request.getId()
+    );
   }
 
   @Transactional

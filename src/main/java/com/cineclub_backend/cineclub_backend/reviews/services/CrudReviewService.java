@@ -192,7 +192,9 @@ public class CrudReviewService {
     String userId
   ) {
     if (params.getTitle() != null) {
-      operations.add(Aggregation.match(Criteria.where("movie.title").regex(params.getTitle())));
+      operations.add(
+        Aggregation.match(Criteria.where("movie.title").regex(params.getTitle(), "i"))
+      );
     }
     if (userId != null) {
       operations.add(Aggregation.match(Criteria.where("user_id").is(userId)));

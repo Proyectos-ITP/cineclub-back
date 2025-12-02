@@ -1,9 +1,11 @@
 package com.cineclub_backend.cineclub_backend.notifications.controllers;
 
-import com.cineclub_backend.cineclub_backend.notifications.models.Notification;
+import com.cineclub_backend.cineclub_backend.notifications.dtos.NotificationResponseDto;
 import com.cineclub_backend.cineclub_backend.notifications.services.NotificationService;
 import com.cineclub_backend.cineclub_backend.shared.dtos.PagedResponseDto;
 import com.cineclub_backend.cineclub_backend.shared.dtos.PaginationDto;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
@@ -17,18 +19,23 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/notifications")
+@RequestMapping("/notifications")
+@Tag(name = "Notifications", description = "Endpoints para gestionar notificaciones")
 @RequiredArgsConstructor
 public class NotificationController {
 
   private final NotificationService notificationService;
 
   @GetMapping
-  public PagedResponseDto<Notification> getUserNotifications(
+  @Operation(
+    summary = "Obtener notificaciones",
+    description = "Obtiene las notificaciones del usuario autenticado"
+  )
+  public PagedResponseDto<NotificationResponseDto> getUserNotifications(
     @ParameterObject PaginationDto findNotificationPagedDto,
     @AuthenticationPrincipal String userId
   ) {
-    Page<Notification> response = notificationService.getUserNotifications(
+    Page<NotificationResponseDto> response = notificationService.getUserNotifications(
       userId,
       findNotificationPagedDto.toPageable()
     );
@@ -38,6 +45,10 @@ public class NotificationController {
   }
 
   @PatchMapping("/{id}/read")
+  @Operation(
+    summary = "Marcar notificación como leida",
+    description = "Marca una notificación como leida"
+  )
   public ResponseEntity<Void> markAsRead(@PathVariable String id) {
     notificationService.markAsRead(id);
     return ResponseEntity.ok().build();

@@ -11,6 +11,7 @@ import com.cineclub_backend.cineclub_backend.social.models.Friend;
 import com.cineclub_backend.cineclub_backend.social.models.FriendRequest;
 import com.cineclub_backend.cineclub_backend.social.repositories.FriendRequestRepository;
 import com.cineclub_backend.cineclub_backend.social.repositories.FriendsRepository;
+import com.cineclub_backend.cineclub_backend.social.repositories.Neo4jClient;
 import com.cineclub_backend.cineclub_backend.users.models.User;
 import com.cineclub_backend.cineclub_backend.users.repositories.UserRepository;
 import java.util.Date;
@@ -34,6 +35,7 @@ public class CrudFriendsRequestsService {
   private final JobQueueService jobQueueService;
   private final NotificationService persistentNotificationService;
   private final FriendsNotificationsService friendsNotificationsService;
+  private final Neo4jClient neo4jClient;
 
   public FriendRequest sendFriendRequest(String userId, String receiverId) {
     Optional<FriendRequest> existingRequest = friendRequestRepository.findBySenderIdAndReceiverId(
@@ -145,6 +147,12 @@ public class CrudFriendsRequestsService {
 
     friendsRepository.save(friendship1);
     friendsRepository.save(friendship2);
+
+    try {
+      neo4jClient.addFriendship(senderId, userId);
+    } catch (Exception e) {
+      System.err.println("Error syncing friendship to Neo4j: " + e.getMessage());
+    }
 
     friendRequest.setStatus("ACCEPTED");
     FriendRequest updatedRequest = friendRequestRepository.save(friendRequest);

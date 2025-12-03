@@ -1,5 +1,6 @@
 package com.cineclub_backend.cineclub_backend.users.services;
 
+import com.cineclub_backend.cineclub_backend.social.repositories.Neo4jClient;
 import com.cineclub_backend.cineclub_backend.users.dtos.UserDto;
 import com.cineclub_backend.cineclub_backend.users.models.User;
 import com.cineclub_backend.cineclub_backend.users.repositories.UserRepository;
@@ -22,10 +23,16 @@ public class CrudUserService {
 
   private final UserRepository userRepository;
   private final MongoTemplate mongoTemplate;
+  private final Neo4jClient neo4jClient;
 
-  public CrudUserService(UserRepository userRepository, MongoTemplate mongoTemplate) {
+  public CrudUserService(
+    UserRepository userRepository,
+    MongoTemplate mongoTemplate,
+    Neo4jClient neo4jClient
+  ) {
     this.userRepository = userRepository;
     this.mongoTemplate = mongoTemplate;
+    this.neo4jClient = neo4jClient;
   }
 
   public User getUserById(String id) {
@@ -37,7 +44,13 @@ public class CrudUserService {
   }
 
   public User saveUser(User user) {
-    return userRepository.save(user);
+    User savedUser = userRepository.save(user);
+    try {
+      neo4jClient.upsertUser(savedUser);
+    } catch (Exception e) {
+      System.err.println("Error syncing user to Neo4j: " + e.getMessage());
+    }
+    return savedUser;
   }
 
   public void deleteUser(String id) {
@@ -361,6 +374,175 @@ public class CrudUserService {
         "Error al obtener usuarios que no son amigos: " + e.getMessage(),
         e
       );
+    }
+  }
+
+  public List<UserDto> getUsersDetails(String currentUserId, List<String> userIds) {
+    try {
+      if (userIds.isEmpty()) {
+        return new ArrayList<>();
+      }
+
+      List<AggregationOperation> operations = new ArrayList<>();
+
+      operations.add(Aggregation.match(Criteria.where("_id").in(userIds)));
+
+      operations.add(Aggregation.lookup("friendRequests", "_id", "receiver_id", "requests_sent"));
+      operations.add(Aggregation.lookup("friendRequests", "_id", "sender_id", "requests_received"));
+
+      operations.add(context ->
+        new Document(
+          "$addFields",
+          new Document(
+            "pending_request_sent",
+            new Document(
+              "$arrayElemAt",
+              List.of(
+                new Document(
+                  "$filter",
+                  new Document()
+                    .append("input", "$requests_sent")
+                    .append("as", "req")
+                    .append(
+                      "cond",
+                      new Document(
+                        "$and",
+                        List.of(
+                          new Document("$eq", List.of("$$req.sender_id", currentUserId)),
+                          new Document("$eq", List.of("$$req.status", "PENDING"))
+                        )
+                      )
+                    )
+                ),
+                0
+              )
+            )
+          ).append(
+            "pending_request_received",
+            new Document(
+              "$arrayElemAt",
+              List.of(
+                new Document(
+                  "$filter",
+                  new Document()
+                    .append("input", "$requests_received")
+                    .append("as", "req")
+                    .append(
+                      "cond",
+                      new Document(
+                        "$and",
+                        List.of(
+                          new Document("$eq", List.of("$$req.receiver_id", currentUserId)),
+                          new Document("$eq", List.of("$$req.status", "PENDING"))
+                        )
+                      )
+                    )
+                ),
+                0
+              )
+            )
+          )
+        )
+      );
+
+      operations.add(
+        Aggregation.project()
+          .and("_id")
+          .as("id")
+          .and("fullName")
+          .as("fullName")
+          .and("email")
+          .as("email")
+          .and("country")
+          .as("country")
+          .and(context ->
+            new Document(
+              "$cond",
+              List.of(
+                new Document(
+                  "$or",
+                  List.of(
+                    new Document(
+                      "$ne",
+                      List.of(new Document("$type", "$pending_request_sent"), "missing")
+                    ),
+                    new Document(
+                      "$ne",
+                      List.of(new Document("$type", "$pending_request_received"), "missing")
+                    )
+                  )
+                ),
+                true,
+                false
+              )
+            )
+          )
+          .as("hasPendingRequest")
+          .and(context ->
+            new Document(
+              "$cond",
+              List.of(
+                new Document(
+                  "$ne",
+                  List.of(new Document("$type", "$pending_request_sent"), "missing")
+                ),
+                new Document("$toString", "$pending_request_sent._id"),
+                new Document(
+                  "$cond",
+                  List.of(
+                    new Document(
+                      "$ne",
+                      List.of(new Document("$type", "$pending_request_received"), "missing")
+                    ),
+                    new Document("$toString", "$pending_request_received._id"),
+                    "$$REMOVE"
+                  )
+                )
+              )
+            )
+          )
+          .as("pendingRequestId")
+          .and(context ->
+            new Document(
+              "$cond",
+              List.of(
+                new Document(
+                  "$ne",
+                  List.of(new Document("$type", "$pending_request_sent"), "missing")
+                ),
+                true,
+                new Document(
+                  "$cond",
+                  List.of(
+                    new Document(
+                      "$ne",
+                      List.of(new Document("$type", "$pending_request_received"), "missing")
+                    ),
+                    false,
+                    "$$REMOVE"
+                  )
+                )
+              )
+            )
+          )
+          .as("isSender")
+      );
+
+      Aggregation aggregation = Aggregation.newAggregation(operations);
+      AggregationResults<Document> results = mongoTemplate.aggregate(
+        aggregation,
+        "users",
+        Document.class
+      );
+
+      List<UserDto> users = new ArrayList<>();
+      for (Document doc : results.getMappedResults()) {
+        users.add(convertDocumentToUserDto(doc));
+      }
+
+      return users;
+    } catch (Exception e) {
+      throw new RuntimeException("Error al obtener detalles de usuarios: " + e.getMessage(), e);
     }
   }
 

@@ -15,12 +15,20 @@ public class MoviesNotificationsService {
   }
 
   public void sendNotification(
+    String notificationId,
     String receiverId,
     String senderId,
     NotificationType type,
     String entityId,
     SenderInfo sender
   ) {
-    notificationService.sendNewNotification(receiverId, type, entityId, senderId, sender);
+    notificationService.sendNewNotification(
+      notificationId,
+      receiverId,
+      type,
+      entityId,
+      senderId,
+      sender
+    );
   }
 }

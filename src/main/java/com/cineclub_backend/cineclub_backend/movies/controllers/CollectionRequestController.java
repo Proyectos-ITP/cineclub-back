@@ -55,6 +55,20 @@ public class CollectionRequestController {
     return ResponseEntity.ok(ApiResponse.success(requests));
   }
 
+  @GetMapping("/sended")
+  @Operation(
+    summary = "Listar solicitudes enviadas",
+    description = "Obtiene las solicitudes de colección enviadas"
+  )
+  public ResponseEntity<ApiResponse<List<CollectionRequestResponseDto>>> getSendedRequests(
+    @AuthenticationPrincipal String userId
+  ) {
+    List<CollectionRequestResponseDto> requests = collectionRequestService.getSendedRequests(
+      userId
+    );
+    return ResponseEntity.ok(ApiResponse.success(requests));
+  }
+
   @PostMapping("/{requestId}/accept")
   @Operation(
     summary = "Aceptar solicitud",

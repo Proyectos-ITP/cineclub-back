@@ -56,15 +56,15 @@ public class CrudFriendsRequestsService {
     FriendRequest savedRequest = friendRequestRepository.save(friendRequest);
 
     sendFriendRequestEmailNotification(savedRequest);
-    sendFriendRequestNotification(savedRequest);
 
-    persistentNotificationService.createNotification(
+    String notificationId = persistentNotificationService.createNotification(
       receiverId,
       userId,
       NotificationType.FRIEND_REQUEST,
       savedRequest.getId()
     );
 
+    sendFriendRequestNotification(savedRequest, notificationId);
     return savedRequest;
   }
 
@@ -90,7 +90,7 @@ public class CrudFriendsRequestsService {
     }
   }
 
-  private void sendFriendRequestNotification(FriendRequest friendRequest) {
+  private void sendFriendRequestNotification(FriendRequest friendRequest, String notificationId) {
     User receiver = userRepository.findById(friendRequest.getReceiverId()).orElse(null);
     User sender = userRepository.findById(friendRequest.getSenderId()).orElse(null);
 
@@ -114,6 +114,7 @@ public class CrudFriendsRequestsService {
       );
 
       friendsNotificationsService.sendNotification(
+        notificationId,
         friendRequest.getReceiverId(),
         friendRequest.getSenderId(),
         NotificationType.FRIEND_REQUEST,
@@ -158,15 +159,15 @@ public class CrudFriendsRequestsService {
     FriendRequest updatedRequest = friendRequestRepository.save(friendRequest);
 
     sendFriendRequestAcceptedEmailNotification(updatedRequest);
-    sendFriendRequestAcceptedNotification(updatedRequest, userId);
 
-    persistentNotificationService.createNotification(
+    String notificationId = persistentNotificationService.createNotification(
       senderId,
       userId,
       NotificationType.FRIEND_ACCEPTED,
       updatedRequest.getId()
     );
 
+    sendFriendRequestAcceptedNotification(updatedRequest, userId, notificationId);
     removeFriendRequestNotification(senderId, userId);
   }
 
@@ -205,7 +206,8 @@ public class CrudFriendsRequestsService {
    */
   private void sendFriendRequestAcceptedNotification(
     FriendRequest friendRequest,
-    String acceptedById
+    String acceptedById,
+    String notificationId
   ) {
     User acceptedByUser = userRepository.findById(acceptedById).orElse(null);
 
@@ -215,6 +217,7 @@ public class CrudFriendsRequestsService {
 
     if (acceptedByUser != null) {
       friendsNotificationsService.sendNotification(
+        notificationId,
         friendRequest.getSenderId(),
         friendRequest.getReceiverId(),
         NotificationType.FRIEND_ACCEPTED,
@@ -288,5 +291,6 @@ public class CrudFriendsRequestsService {
     }
 
     friendRequestRepository.delete(friendRequest);
+    removeFriendRequestNotification(userId, receiverId);
   }
 }

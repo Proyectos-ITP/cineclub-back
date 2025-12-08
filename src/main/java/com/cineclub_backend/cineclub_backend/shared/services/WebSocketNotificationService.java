@@ -61,6 +61,7 @@ public class WebSocketNotificationService {
    * @param payload Contenido de la notificación
    */
   public void sendNewNotification(
+    String notificationId,
     String userId,
     NotificationType notificationType,
     String entityId,
@@ -68,6 +69,7 @@ public class WebSocketNotificationService {
     SenderInfo sender
   ) {
     Map<String, Object> notification = new HashMap<>();
+    notification.put("id", notificationId);
     notification.put("type", notificationType);
     notification.put("entityId", entityId);
     notification.put("senderId", senderId);

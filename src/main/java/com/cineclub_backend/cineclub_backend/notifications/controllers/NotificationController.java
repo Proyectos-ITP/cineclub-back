@@ -2,6 +2,7 @@ package com.cineclub_backend.cineclub_backend.notifications.controllers;
 
 import com.cineclub_backend.cineclub_backend.notifications.dtos.NotificationResponseDto;
 import com.cineclub_backend.cineclub_backend.notifications.services.NotificationService;
+import com.cineclub_backend.cineclub_backend.shared.dtos.ApiResponse;
 import com.cineclub_backend.cineclub_backend.shared.dtos.PagedResponseDto;
 import com.cineclub_backend.cineclub_backend.shared.dtos.PaginationDto;
 import io.swagger.v3.oas.annotations.Operation;
@@ -42,6 +43,15 @@ public class NotificationController {
     return new PagedResponseDto<>(
       new PageImpl<>(response.getContent(), response.getPageable(), response.getTotalElements())
     );
+  }
+
+  @GetMapping("/count")
+  @Operation(
+    summary = "Obtener cantidad de notificaciones",
+    description = "Obtiene la cantidad de notificaciones del usuario autenticado"
+  )
+  public ResponseEntity<ApiResponse<Long>> getCount(@AuthenticationPrincipal String userId) {
+    return ResponseEntity.ok(ApiResponse.success(notificationService.getCount(userId)));
   }
 
   @PatchMapping("/{id}/read")

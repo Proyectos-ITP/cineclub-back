@@ -4,6 +4,7 @@ import com.cineclub_backend.cineclub_backend.social.dtos.FriendResponseDto;
 import com.cineclub_backend.cineclub_backend.social.models.FriendRequest;
 import com.cineclub_backend.cineclub_backend.social.repositories.FriendRequestRepository;
 import com.cineclub_backend.cineclub_backend.social.repositories.FriendsRepository;
+import com.cineclub_backend.cineclub_backend.social.repositories.Neo4jClient;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -26,15 +27,18 @@ public class CrudFriendsService {
   private final FriendsRepository friendsRepository;
   private final FriendRequestRepository friendRequestRepository;
   private final MongoTemplate mongoTemplate;
+  private final Neo4jClient neo4jClient;
 
   public CrudFriendsService(
     FriendsRepository friendsRepository,
     FriendRequestRepository friendRequestRepository,
-    MongoTemplate mongoTemplate
+    MongoTemplate mongoTemplate,
+    Neo4jClient neo4jClient
   ) {
     this.friendsRepository = friendsRepository;
     this.friendRequestRepository = friendRequestRepository;
     this.mongoTemplate = mongoTemplate;
+    this.neo4jClient = neo4jClient;
   }
 
   public Page<FriendResponseDto> getFriendsPaginated(
@@ -159,6 +163,13 @@ public class CrudFriendsService {
     }
     if (request2.isPresent()) {
       friendRequestRepository.delete(request2.get());
+    }
+
+    try {
+      System.out.println("Removing friendship from Neo4j: " + userId + " and " + friendId);
+      neo4jClient.removeFriendship(userId, friendId);
+    } catch (Exception e) {
+      System.err.println("Error removing friendship from Neo4j: " + e.getMessage());
     }
   }
 }

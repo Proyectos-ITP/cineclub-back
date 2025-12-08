@@ -10,6 +10,8 @@ import org.springframework.stereotype.Repository;
 public interface CollectionRequestRepository extends MongoRepository<CollectionRequest, String> {
   List<CollectionRequest> findByReceiverIdAndStatus(String receiverId, String status);
 
+  List<CollectionRequest> findBySenderIdAndStatus(String senderId, String status);
+
   Optional<CollectionRequest> findBySenderIdAndReceiverIdAndStatus(
     String senderId,
     String receiverId,

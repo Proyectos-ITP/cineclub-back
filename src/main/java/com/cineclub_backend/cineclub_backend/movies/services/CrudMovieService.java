@@ -105,6 +105,10 @@ public class CrudMovieService {
             .as("director")
             .and("vote")
             .as("vote")
+            .and("up_votes")
+            .as("upVotes")
+            .and("down_votes")
+            .as("downVotes")
         )
         .as("data");
 

@@ -7,6 +7,7 @@ import com.cineclub_backend.cineclub_backend.notifications.repositories.Notifica
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -25,7 +26,7 @@ public class NotificationService {
   private final NotificationRepository notificationRepository;
   private final MongoTemplate mongoTemplate;
 
-  public void createNotification(
+  public String createNotification(
     String recipientId,
     String senderId,
     NotificationType type,
@@ -41,6 +42,7 @@ public class NotificationService {
       .build();
 
     notificationRepository.save(notification);
+    return notification.getId();
   }
 
   public Page<NotificationResponseDto> getUserNotifications(String userId, Pageable pageable) {
@@ -115,5 +117,11 @@ public class NotificationService {
         notification.setRead(true);
         notificationRepository.save(notification);
       });
+  }
+
+  public long getCount(String userId) {
+    return notificationRepository.count(
+      Example.of(Notification.builder().recipientId(userId).build())
+    );
   }
 }

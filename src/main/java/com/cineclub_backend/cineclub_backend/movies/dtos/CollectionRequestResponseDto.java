@@ -10,6 +10,9 @@ public class CollectionRequestResponseDto {
   private String senderId;
   private String senderName;
   private String senderEmail;
+  private String receiverId;
+  private String receiverName;
+  private String receiverEmail;
   private String status;
   private LocalDateTime createdAt;
 }

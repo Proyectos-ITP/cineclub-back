@@ -47,6 +47,23 @@ public class Neo4jClient {
     }
   }
 
+  public void removeFriendship(String userId1, String userId2) {
+    try (Session session = driver.session()) {
+      System.out.println("Removing friendship between " + userId1 + " and " + userId2);
+      session.executeWrite(tx -> {
+        tx.run(
+          "MATCH (u1:User {userId: $userId1}) " +
+            "MATCH (u2:User {userId: $userId2}) " +
+            "MATCH (u1)-[r1:FRIEND]->(u2) " +
+            "MATCH (u2)-[r2:FRIEND]->(u1) " +
+            "DELETE r1, r2",
+          Map.of("userId1", userId1, "userId2", userId2)
+        );
+        return null;
+      });
+    }
+  }
+
   public Page<String> getRecommendations(String userId, Pageable pageable) {
     try (Session session = driver.session()) {
       System.out.println("Getting recommendations for " + userId);

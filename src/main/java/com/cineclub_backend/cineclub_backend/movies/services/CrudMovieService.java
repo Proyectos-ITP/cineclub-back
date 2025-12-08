@@ -289,6 +289,8 @@ public class CrudMovieService {
     dto.setPosterPath(movie.getPosterPath());
     dto.setRuntime(movie.getRuntime());
     dto.setOriginalLanguage(movie.getOriginalLanguage());
+    dto.setUpVotes(movie.getUpVotes());
+    dto.setDownVotes(movie.getDownVotes());
 
     var directorDto = crudDirectorService.getDirectorByMovieId(movie.getId());
     dto.setDirector(directorDto != null ? directorDto.getDirector() : null);

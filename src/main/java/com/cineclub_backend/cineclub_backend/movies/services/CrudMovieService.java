@@ -16,6 +16,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
@@ -43,7 +44,7 @@ public class CrudMovieService {
     this.mongoTemplate = mongoTemplate;
   }
 
-  public Page<MovieDto> getAllMovies(String title, Pageable pageable) {
+  public Page<MovieDto> getAllMovies(String title, Pageable pageable, String userId) {
     try {
       List<AggregationOperation> operations = new ArrayList<>();
 
@@ -55,16 +56,7 @@ public class CrudMovieService {
         .and(Aggregation.count().as("total"))
         .as("metadata")
         .and(
-          Aggregation.sort(
-            pageable
-              .getSort()
-              .and(
-                org.springframework.data.domain.Sort.by(
-                  org.springframework.data.domain.Sort.Direction.ASC,
-                  "_id"
-                )
-              )
-          ),
+          Aggregation.sort(pageable.getSort().and(Sort.by(Direction.DESC, "_id"))),
           Aggregation.skip((long) pageable.getPageNumber() * pageable.getPageSize()),
           Aggregation.limit(pageable.getPageSize()),
           Aggregation.stage(
@@ -78,6 +70,18 @@ public class CrudMovieService {
               "} }"
           ),
           Aggregation.unwind("director", true),
+          Aggregation.stage(
+            "{ $lookup: { " +
+              "  from: 'movie_votes', " +
+              "  let: { movie_id_str: { $toString: '$_id' } }, " +
+              "  pipeline: [ " +
+              "    { $match: { $expr: { $and: [ { $eq: ['$movie_id', '$$movie_id_str'] }, { $eq: ['$user_id', '" +
+              userId +
+              "'] } ] } } } " +
+              "  ], " +
+              "  as: 'vote' " +
+              "} }"
+          ),
           Aggregation.project()
             .and("_id")
             .as("id")
@@ -99,6 +103,8 @@ public class CrudMovieService {
             .as("originalLanguage")
             .and("director.director")
             .as("director")
+            .and("vote")
+            .as("vote")
         )
         .as("data");
 
@@ -188,6 +194,14 @@ public class CrudMovieService {
       Object downVotesObj = doc.get("downVotes");
       if (downVotesObj instanceof Number) {
         dto.setDownVotes(((Number) downVotesObj).intValue());
+      }
+    }
+
+    if (doc.containsKey("vote")) {
+      List<?> voteList = (List<?>) doc.get("vote");
+      if (voteList != null && !voteList.isEmpty()) {
+        Document voteDoc = (Document) voteList.get(0);
+        dto.setUserVote(voteDoc.getString("type"));
       }
     }
     return dto;
@@ -294,7 +308,7 @@ public class CrudMovieService {
     return movie;
   }
 
-  public List<MovieDto> getTopMovies(int limit) {
+  public List<MovieDto> getTopMovies(int limit, String userId) {
     Aggregation aggregation = Aggregation.newAggregation(
       Aggregation.addFields()
         .addField("score")
@@ -312,6 +326,18 @@ public class CrudMovieService {
       Aggregation.limit(limit),
       Aggregation.lookup("directors", "movie_id", "movie_id", "director"),
       Aggregation.unwind("director", true),
+      Aggregation.stage(
+        "{ $lookup: { " +
+          "  from: 'movie_votes', " +
+          "  let: { movie_id_str: { $toString: '$_id' } }, " +
+          "  pipeline: [ " +
+          "    { $match: { $expr: { $and: [ { $eq: ['$movie_id', '$$movie_id_str'] }, { $eq: ['$user_id', '" +
+          userId +
+          "'] } ] } } } " +
+          "  ], " +
+          "  as: 'vote' " +
+          "} }"
+      ),
       Aggregation.project()
         .and("_id")
         .as("id")
@@ -337,6 +363,8 @@ public class CrudMovieService {
         .as("upVotes")
         .and("down_votes")
         .as("downVotes")
+        .and("vote")
+        .as("vote")
     );
 
     AggregationResults<Document> results = mongoTemplate.aggregate(
@@ -358,5 +386,60 @@ public class CrudMovieService {
         return dto;
       })
       .toList();
+  }
+
+  public MovieDto getRandomMovie() {
+    Aggregation aggregation = Aggregation.newAggregation(
+      Aggregation.sample(1),
+      Aggregation.stage(
+        "{ $lookup: { " +
+          "  from: 'directors', " +
+          "  let: { movie_id_str: { $toString: '$_id' } }, " +
+          "  pipeline: [ " +
+          "    { $match: { $expr: { $eq: ['$movie_id', '$$movie_id_str'] } } } " +
+          "  ], " +
+          "  as: 'director_doc' " +
+          "} }"
+      ),
+      Aggregation.unwind("director_doc", true),
+      Aggregation.project()
+        .and("_id")
+        .as("id")
+        .and("external_id")
+        .as("externalId")
+        .and("title")
+        .as("title")
+        .and("overview")
+        .as("overview")
+        .and("genres")
+        .as("genres")
+        .and("release_date")
+        .as("releaseDate")
+        .and("poster_path")
+        .as("posterPath")
+        .and("runtime")
+        .as("runtime")
+        .and("original_language")
+        .as("originalLanguage")
+        .and("up_votes")
+        .as("upVotes")
+        .and("down_votes")
+        .as("downVotes")
+        .and("director_doc.director")
+        .as("director")
+    );
+
+    AggregationResults<Document> results = mongoTemplate.aggregate(
+      aggregation,
+      "movies",
+      Document.class
+    );
+
+    Document doc = results.getUniqueMappedResult();
+    if (doc == null) {
+      throw new NoSuchElementException("No hay películas disponibles");
+    }
+
+    return convertDocumentToMovieDto(doc);
   }
 }

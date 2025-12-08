@@ -7,6 +7,7 @@ import com.cineclub_backend.cineclub_backend.movies.dtos.UpdateMovieDto;
 import com.cineclub_backend.cineclub_backend.movies.dtos.VoteMovieDto;
 import com.cineclub_backend.cineclub_backend.movies.services.CrudMovieService;
 import com.cineclub_backend.cineclub_backend.movies.services.CrudMovieVoteService;
+import com.cineclub_backend.cineclub_backend.movies.services.MovieRecommendationService;
 import com.cineclub_backend.cineclub_backend.shared.dtos.ApiResponse;
 import com.cineclub_backend.cineclub_backend.shared.dtos.PagedResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
@@ -37,21 +38,28 @@ public class MovieController {
 
   private final CrudMovieService crudMovieService;
   private final CrudMovieVoteService crudMovieVoteService;
+  private final MovieRecommendationService movieRecommendationService;
 
   public MovieController(
     CrudMovieService crudMovieService,
-    CrudMovieVoteService crudMovieVoteService
+    CrudMovieVoteService crudMovieVoteService,
+    MovieRecommendationService movieRecommendationService
   ) {
     this.crudMovieService = crudMovieService;
     this.crudMovieVoteService = crudMovieVoteService;
+    this.movieRecommendationService = movieRecommendationService;
   }
 
   @GetMapping
   @Operation(summary = "Listar películas", description = "Obtiene la lista de películas")
-  public PagedResponseDto<MovieDto> getAllMovies(@ParameterObject FindMovieDto findMovieDto) {
+  public PagedResponseDto<MovieDto> getAllMovies(
+    @ParameterObject FindMovieDto findMovieDto,
+    @AuthenticationPrincipal String userId
+  ) {
     Page<MovieDto> page = crudMovieService.getAllMovies(
       findMovieDto.getTitle(),
-      findMovieDto.toPageable()
+      findMovieDto.toPageable(),
+      userId
     );
     return new PagedResponseDto<>(page);
   }
@@ -122,9 +130,32 @@ public class MovieController {
     description = "Obtiene el top de películas basado en votos (upVotes - downVotes)"
   )
   public ResponseEntity<ApiResponse<List<MovieDto>>> getTopMovies(
-    @RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit
+    @RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit,
+    @AuthenticationPrincipal String userId
   ) {
-    List<MovieDto> movies = crudMovieService.getTopMovies(limit);
+    List<MovieDto> movies = crudMovieService.getTopMovies(limit, userId);
     return ResponseEntity.ok(ApiResponse.success(movies));
+  }
+
+  @GetMapping("/recommended")
+  @Operation(
+    summary = "Recomendaciones de películas",
+    description = "Obtiene 20 películas aleatorias basadas en los votos UP del usuario (coincidencia de géneros y año)"
+  )
+  public ResponseEntity<ApiResponse<List<MovieDto>>> getRecommendedMovies(
+    @AuthenticationPrincipal String userId
+  ) {
+    List<MovieDto> movies = movieRecommendationService.run(userId);
+    return ResponseEntity.ok(ApiResponse.success(movies));
+  }
+
+  @GetMapping("/random")
+  @Operation(
+    summary = "Película aleatoria",
+    description = "Obtiene una película aleatoria de la base de datos"
+  )
+  public ResponseEntity<ApiResponse<MovieDto>> getRandomMovie() {
+    MovieDto movie = crudMovieService.getRandomMovie();
+    return ResponseEntity.ok(ApiResponse.success(movie));
   }
 }

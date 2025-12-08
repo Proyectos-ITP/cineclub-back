@@ -16,12 +16,20 @@ public class MovieDto {
   private String posterPath;
   private int runtime;
   private String originalLanguage;
+  private Integer matchScore;
 
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   private int upVotes;
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   private int downVotes;
 
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   private double score;
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
   private String director;
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  private String userVote;
 }
